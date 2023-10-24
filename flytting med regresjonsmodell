@@ -1,0 +1,238 @@
+require no.ssb.fdb:21 as db
+create-dataset new1
+import db/BEFOLKNING_STATUSKODE 2021-01-01 as rtegstat
+destring rtegstat
+tabulate rtegstat
+keep if rtegstat == 1
+
+// Importere kommune-variabel for 2021
+import db/BEFOLKNING_KOMMNR_FORMELL 2021-01-01 as kommunefor2021, outer_join
+
+// Importere kommune-variabel for 2016
+import db/BEFOLKNING_KOMMNR_FORMELL 2016-01-01 as kommunefor2016, outer_join
+
+
+destring kommunefor2021, force
+destring kommunefor2016, force
+
+generate kom2021 = substr(kommunefor2021, 1, 4)
+generate fylke2021 = substr(kommunefor2021, 1,2)
+generate kom2016 = substr(kommunefor2016, 1, 4)
+generate fylke2016 = substr(kommunefor2016, 1,2)
+destring kom2021
+
+// Recoding KOMMUNE/FYLKE 5-kategorier Østfold, Buskerud, Akershus, Oslo, Resten av Norge
+recode kom2021 (101/106 111 113/115 118/119 122/125 127/128 130/131 133/138 3001/3004 3011/3018 = 1 'Østfold' ) (602 604/605 612 615/626 631/633 3005/3007 3038/3052 = 2 'Buskerud' ) (121 211 213/217 219/221 226/231 233/239 627 628 3019/3037 3053/3054 = 3 'Akershus' ) (301 = 4 'Oslo') (1101 1103 1106 1108 1111 1112 1114 1119/1122 1124 1127 1130 1133/1135 1144/1146 1149 1151 1160 1505/1507 1511 1514/1517 1520 1525 1528 1531 1532 1535 1539 1547 1554 1557 1560 1563 1566 1573 1576/1579 1804 1806 1811/1813 1815/1816 1818 1820 1822 1824/1828 1832/1841 1845 1848 1851 1853 1856 1857 1859 1860 1865/1868 1870 1871 1874 1875 3401 3403 3405 3407 3411/3443 3446/3454 3801/3808 3811/3825 4201/4207 4211/4228 4601 4602 4611/4651 5001 5006 5007 5014 5020/5022 5025/5029 5031/5038 5041/5047  5049 5052/5061 5401/5406 5411/5430 5432/5444= 5 'Resten av Norge')
+tabulate kom2021
+destring kom2016
+recode kom2016 (101/106 111 113/115 118/119 122/125 127/128 130/131 133/138 3001/3004 3011/3018 = 1 'Østfold' ) (602 604/605 612 615/626 631/633 711 3005/3007 3038/3052 = 2 'Buskerud' ) (121 211 213/217 219/221 226/231 233/239 627 628 3019/3037 3053/3054 = 3 'Akershus' ) (301 = 4 'Oslo') (402 403 412 415 417/420 423 425/430 432 434 436/439 441 501 502 511/517 519/522 528 529 532/534 536 538 540/545 701 702 704 706 709 713 714 716 719 720 722 723 728 805/807 811 814 815 817 819 821 822 826/831 833 834 901 904 906 911 912 914 919 926 928 929 935 937 938 940 941 1001/1004 1014 1017 1018 1021 1026 1027 1029 1032 1034 1037 1046 1101/1103 1106 1108 1111 1112 1114 1119/1122 1124 1127 1129 1130 1133/1135 1141 1142 1144/1146 1149 1151 1160 1201 1211 1216 1219 1221/1224 1227 1228 1231/1235 1238 1241/1247 1251/1253 1256 1259 1260 1263/1266 1401 1411/1413 1416/1422 1424 1426 1428/1433 1438/1439 1441 1443/1445 1449 1502 1504/1507 1511 1514/1517 1519 1520 1523/1526 1528 1529 1531 1532 1534 1535 1539 1543 1545/1548 1551 1554 1557 1560 1563 1566 1567 1571 1573 1576/1579 1601 1612 1613 1617 1620/1622 1624 1627 1630 1632/1636 1638 1640 1644 1648 1653 1657 1662/1665 1702 1703 1711 1714 1717/1719 1721 1724 1725 1736 1738 1739 1740 1742/1744 1748/1751 1755 1756 1804/1806 1811/1813 1815/1816 1818 1820 1822 1824/1828 1832/1841 1845 1848 1850/1854 1856 1857 1859 1860 1865/1868 1870 1871 1874 1875 1902/1903 1911 1913 1917 1919 1920 1922/1929 1931 1933 1936 1938/1943 2002/2004 2011 2012 1014/2015 2017/2025 2027/2028 2030 3401 3403 3405 3407 3411/3443 3446/3454 3801/3808 3811/3825 4201/4207 4211/4228 4601 4602 4611/4651 5001 5006 5007 5014 5020/5022 5025/5029 5031/5038 5041/5047  5049 5052/5061 5401/5406 5411/5430 5432/5444= 5 'Resten av Norge')
+tabulate kom2016
+// Lage flytter variabel. 
+generate flytter =0 if kom2021 == kom2016 & sysmiss(kom2021) == 0 & sysmiss(kom2016) == 0
+replace flytter = 1 if kom2021 != kom2016 & sysmiss(kom2021) == 0 & sysmiss(kom2016) == 0
+tabulate flytter, missing cellpct freq
+// sankey-diagram viser hvor folk flyttet siden 2016
+sankey kom2016 kom2021 if flytter
+//Importere uføre-variabel for 2016. Jeg vil bruke uføre fra 2021 i regresjonen.
+import db/UFOERP2011FDT_MOTTAK 2016-11-30 as uføre2016
+sankey kom2016 kom2021 if flytter & uføre2016
+sankey kom2016 kom2021 if flytter & uføre2016 & norsk
+destring fylke2021
+// Importere uføre-variabel for 2021
+import db/UFOERP2011FDT_MOTTAK 2021-01-01 as uføre
+//Variabel folk som bor i Østfold i 2021 og uføre
+generate UføreØst = 0
+replace UføreØst = 1 if kom2021 == 1 & uføre == '1'
+tabulate UføreØst
+// Lager kjønn-variabler for regresjonsmodell
+import db/BEFOLKNING_KJOENN 
+generate kvinne = 0
+replace kvinne= 1 if BEFOLKNING_KJOENN == '2'
+generate mann = 0
+replace mann = 1 if BEFOLKNING_KJOENN == '1'
+// Lager barn-variabel. Den variabelen er foreldre som gar barn. derfor bruker jeg 'i' i regresjonsmodellen, ikke 'c'!
+import db/BEFOLKNING_FORELDREKODE 2021-01-01 as foreldre
+generate barn = 0
+replace barn = 1 if foreldre == '1' & '2'  & '3'  & '4'  & '5'  & '6' 
+//Lager utdanning-variabler for regresjonsmodell
+import db/NUDB_BU 2021-01-01  as education
+destring education
+// lager høy-utdanning variabel
+import db/NUDB_BU 2016-01-01  as utd16
+generate utdnivå = substr(utd16,1,1)
+destring utdnivå, force
+generate høy_utd = 1 if utdnivå >= 7
+replace høy_utd = 0 if utdnivå >= 0 & utdnivå < 7
+
+// Lage alder-variabel
+import db/BEFOLKNING_FOEDSELS_AAR_MND
+generate alder = 2021- int(BEFOLKNING_FOEDSELS_AAR_MND/100)
+// Bruke nominaldata og lage etniske-variabler
+import db/BEFOLKNING_INVKAT as invkat
+generate nordmann = 0
+replace nordmann = 1 if invkat == 'A'
+generate innvandrere = 0
+replace innvandrere = 1 if invkat == 'B'
+
+// Lage flere uføre-variabler for andre fylker
+generate UføreAkershus = 0
+replace UføreAkershus = 1 if kom2021 == 3 & uføre == '1'
+tabulate UføreAkershus
+generate UføreBuskerud = 0
+replace UføreBuskerud = 1 if kom2021 == 2 & uføre == '1'
+tabulate UføreBuskerud
+
+keep if kom2021 == 1 | kom2021 == 2 | kom2021 == 3 | kom2021 == 4 | kom2021 == 5
+keep if kom2016 == 1 | kom2016 == 2 | kom2016 == 3 | kom2016 == 4 | kom2016 == 5
+
+sankey kom2016  kom2021 if  flytter
+tabulate kom2016  kom2021 if  flytter
+
+ regress UføreBuskerud nordmann utdanning kvinne mann alder flytter innvandrere
+regress  UføreAkershus nordmann utdanning kvinne mann alder flytter innvandrere
+
+tabulate kom2016  kom2021 if  flytter
+// slår sammen uføre og fylke variabel
+destring uføre
+generate Østfold16 = 0 
+replace Østfold16= 1 if kom2016 == 1
+generate Buskerud16 = 0
+replace Buskerud16= 1 if kom2016 == 2
+generate Akershus16 = 0
+replace Akershus16= 1 if kom2016 == 3
+generate Oslo16 = 0
+replace Oslo16= 1 if kom2016 == 4
+generate Resten16 = 0
+replace Resten16= 1 if kom2016 == 5
+
+generate Østfold21 = 0 
+replace Østfold21= 1 if kom2021 == 1
+generate Buskerud21 = 0
+replace Buskerud21= 1 if kom2021 == 2
+generate Akershus21 = 0
+replace Akershus21= 1 if kom2021 == 3
+generate Oslo21 = 0
+replace Oslo21= 1 if kom2021 == 4
+generate Resten21 = 0
+replace Resten21= 1 if kom2021 == 5
+destring uføre2016
+
+// Lager samboer og ugift variabler
+import db/SIVSTANDFDT_SIVSTAND 2016-01-01 as sivstand
+generate samboer = 0 
+replace samboer = 2 if sivstand == '2' & '6'
+generate ugift = 0
+replace ugift = 1 if sivstand == '1'
+
+
+ regress flytter  c.utdnivå c.alder i.innvandrere i.Østfold16#i.uføre2016 c.alder i.Buskerud16#i.uføre2016 i.Oslo16#i.uføre2016 i.Akershus16#i.uføre2016  i.innvandrere#i.Oslo16 i.Oslo16#c.alder i.Oslo16#c.utdnivå i.Akershus16#c.utdnivå i.Buskerud16#c.utdnivå  i.Østfold16#c.utdnivå i.innvandrere#i.Østfold16 i.innvandrere#i.Buskerud16 i.innvandrere#i.Resten16  i.Oslo16#i.barn i.Akershus16#i.barn i.Resten16#i.barn i.Østfold16#i.barn i.Buskerud16#i.barn i.barn i.uføre
+
+ regress flytter  c.utdnivå c.alder i.innvandrere i.Østfold16#i.uføre2016 c.alder i.Buskerud16#i.uføre2016 i.Oslo16#i.uføre2016 i.Akershus16#i.uføre2016  i.innvandrere#i.Oslo16 i.Oslo16#c.alder i.Oslo16#c.utdnivå i.Akershus16#c.utdnivå i.Buskerud16#c.utdnivå  i.Østfold16#c.utdnivå i.innvandrere#i.Østfold16 i.innvandrere#i.Buskerud16 i.innvandrere#i.Resten16  i.Oslo16#i.barn i.Akershus16#i.barn i.Resten16#i.barn i.Østfold16#i.barn i.Buskerud16#i.barn i.barn i.uføre i.uføre2016#i.Østfold21 
+ // lager noen matris diagramer for å se tabellene
+tabulate kom2016 kom2021 if flytter & høy_utd
+tabulate kom2016 kom2021 if flytter & innvandrere
+tabulate kom2016 kom2021 if flytter & kvinne
+tabulate kom2016 kom2021 if flytter & uføre
+tabulate kom2016 kom2021 if flytter & mann
+// lager formue variabler 3 kategorie formue over 500.000, formue over 1 mill, formue over 1,5 mill. Jeg bruker en av disse i regresjonen.
+import db/INNTEKT_BRUTTOFORM 2020-01-01 as  formue
+generate formueint = 1
+replace formueint = 2 if formue > 500000
+replace formueint = 3 if formue > 1000000
+replace formueint = 4 if formue > 1500000
+tabulate formueint
+generate formue500 = 0
+replace formue500 = 1 if formueint == 2
+generate formue1mill = 0
+replace formue1mill = 1 if formueint == 3
+generate formue1o5mill = 0
+replace formue1o5mill = 1 if formueint == 4
+tabulate formue1o5mill
+// matris diagramer
+tabulate kom2016 kom2021 if flytter & formue1o5mill
+tabulate kom2016 kom2021 if flytter & formue1mill
+
+generate alder1 = 0
+replace alder1 = 1 if alder > 18 & alder <= 25
+replace alder1 = 2 if alder > 25 & alder <= 40
+replace alder1 = 3 if alder > 40 & alder <= 60
+replace alder1 = 4 if alder >= 60 
+// lager alder kategorier.
+tabulate alder1
+generate alder18til25 = 0
+replace alder18til25 = 1  if alder1 == 1
+generate alder26til40 = 0
+replace alder26til40 = 1  if alder1 == 2
+generate alder40til60 = 0
+replace alder40til60 = 1  if alder1 == 3
+generate alder60plus = 0
+replace alder60plus =  1  if alder1 == 4
+// kjører regresjonsmodell med alle fylkene og flytte variablen er avhengig variabel.
+regress flytter  c.utdnivå c.alder i.innvandrere i.Østfold16#i.uføre2016 c.alder i.Buskerud16#i.uføre2016 i.Oslo16#i.uføre2016 i.Akershus16#i.uføre2016  i.innvandrere#i.Oslo16 i.Oslo16#c.alder i.Oslo16#c.utdnivå i.Akershus16#c.utdnivå i.Buskerud16#c.utdnivå  i.Østfold16#c.utdnivå i.innvandrere#i.Østfold16 i.innvandrere#i.Buskerud16 i.innvandrere#i.Resten16  i.Oslo16#i.barn i.Akershus16#i.barn i.Resten16#i.barn i.Østfold16#i.barn i.Buskerud16#i.barn i.barn i.uføre i.uføre2016#i.Østfold21 i.uføre2016#i.Akershus21 i.uføre#i.Oslo21 i.uføre2016#i.Resten21 i.Østfold21#alder18til25 i.Østfold21#i.alder26til40 
+tabulate kom2016 kom2021 if flytter & alder18til25
+import db/UFOERP2011FDT_MOTTAK 2017-11-30 as uføre2017
+regress flytter  c.utdnivå c.alder i.innvandrere i.Østfold21#i.uføre2016 c.alder i.Buskerud21#i.uføre2016 i.Oslo21#i.uføre2016 i.Akershus21#i.uføre2016  i.innvandrere#i.Oslo21 i.Oslo21#c.alder i.Oslo21#c.utdnivå i.Akershus21#c.utdnivå i.Buskerud21#c.utdnivå  i.Østfold16#c.utdnivå i.innvandrere#i.Østfold16 i.innvandrere#i.Buskerud16 i.innvandrere#i.Resten16  i.Oslo16#i.barn i.Akershus21#i.barn i.Resten21#i.barn i.Østfold21#i.barn i.Buskerud21#i.barn i.barn i.uføre2017 i.uføre2017#i.Østfold21 i.uføre2017#i.Akershus21 i.uføre2017#i.Oslo21 i.uføre2017#i.Resten21 i.Østfold21#alder18til25 i.Østfold21#i.alder26til40 c.alder18til25 c.alder26til40 c.alder40til60 i.samboer i.ugift 
+
+regress flytter  c.utdnivå c.alder i.innvandrere i.Østfold21#i.uføre c.alder i.Buskerud21#i.uføre i.Oslo21#i.uføre2016 i.Akershus21#i.uføre  i.innvandrere#i.Oslo21 i.Oslo21#c.alder i.Oslo21#c.utdnivå i.Akershus21#c.utdnivå i.Buskerud21#c.utdnivå  i.Østfold16#c.utdnivå i.innvandrere#i.Østfold16 i.innvandrere#i.Buskerud21 i.innvandrere#i.Resten21  i.Oslo16#i.barn i.Akershus16#i.barn i.Resten16#i.barn i.Østfold16#i.barn i.Buskerud21#i.barn i.barn i.uføre#i.Østfold21 i.uføre#i.Akershus21 i.uføre#i.Oslo21 i.uføre#i.Resten21 i.Østfold21#alder18til25 i.Østfold21#i.alder26til40 c.alder18til25 c.alder26til40 c.alder40til60 i.samboer i.ugift 
+
+tabulate kom2021 kom2016 if flytter
+regress flytter uføre c.utdnivå i.innvandrere i.barn i.samboer i.formue500 c.alder18til25 c.alder26til40 c.alder40til60 
+import db/ARBSOEK2001FDT_HOVED 2018-11-16 as arbsøkerstatus18
+import db/ARBSOEK2001FDT_HOVED 2017-10-16 as arbsøkerstatus17
+tabulate arbsøkerstatus17
+generate arbledig18 = 0 
+replace arbledig18 = 1 if arbsøkerstatus18 == '1'
+generate arbledig17 = 0 
+replace arbledig17 = 1 if arbsøkerstatus17 == '1'
+generate tiltak18 = 0
+replace tiltak18 = 1 if  arbsøkerstatus18 == '3'
+generate delvisledig18 = 0 
+replace delvisledig18 =1 if arbsøkerstatus18 == '2'
+generate andrearbeidssøkervariabler = 0 
+replace andrearbeidssøkervariabler = 1 if arbsøkerstatus18 == '4' & '6' & '7'
+
+
+tabulate kom2016 kom2021 if flytter & arbledig18
+tabulate kom2016 kom2021 if flytter & arbledig17
+
+import db/ARBSOEK2001FDT_HOVED 2018-10-16 as arbsøkerstatus18a
+tabulate arbsøkerstatus18a
+tabulate kom2016 kom2021 if flytter & arbsøkerstatus18a
+tabulate kom2016 kom2021 if flytter & arbsøkerstatus18
+
+//// lager variabler for flytting til fylke for hvert fylke/resten av Norge,
+generate flyttetilØstfold= 0
+replace flyttetilØstfold = 1 if kom2021 == 1 & flytter == 1
+generate  flyttetilAkershus = 0
+replace flyttetilAkershus = 1 if kom2021 == 3 & flytter == 1
+generate  flyttetilOslo = 0
+replace flyttetilOslo = 1 if kom2021 == 4 & flytter == 1
+generate flyttetilBuskerud = 0
+replace flyttetilBuskerud = 1 if kom2021 == 2 & flytter == 1
+
+regress flyttetilØstfold uføre c.utdnivå i.innvandrere i.barn i.samboer i.formue500 c.alder18til25 c.alder26til40 c.alder40til60 
+regress flyttetilØstfold uføre utdnivå innvandrere barn samboer formue500 alder18til25 alder26til40 alder40til60  arbledig18 arbledig17
+regress flytter  c.utdnivå c.alder i.innvandrere i.Østfold21#i.uføre2016 c.alder i.Buskerud21#i.uføre2016 i.Oslo21#i.uføre2016 i.Akershus21#i.uføre2016  i.innvandrere#i.Oslo21 i.Oslo21#c.alder i.Oslo21#c.utdnivå i.Akershus21#c.utdnivå i.Buskerud21#c.utdnivå  i.Østfold16#c.utdnivå i.innvandrere#i.Østfold16 i.innvandrere#i.Buskerud16 i.innvandrere#i.Resten16  i.Oslo16#i.barn i.Akershus21#i.barn i.Resten21#i.barn i.Østfold21#i.barn i.Buskerud21#i.barn i.barn i.uføre2017 i.uføre2017#i.Østfold21 i.uføre2017#i.Akershus21 i.uføre2017#i.Oslo21 i.uføre2017#i.Resten21 i.Østfold21#alder18til25 i.Østfold21#i.alder26til40 c.alder18til25 c.alder26til40 c.alder40til60 i.samboer i.ugift  i.arbledig18 i.arbledig17
+regress flyttetilØstfold uføre utdnivå innvandrere barn samboer formue500 alder18til25 alder26til40 alder40til60  arbledig18 arbledig17 høy_utd
+
+// lager variabler for flytting fra fylke for hvert fylke/resten av Norge,
+generate  flyttefraAkershus = 0
+replace flyttefraAkershus = 1 if kom2016 == 3 & flytter == 1
+generate  flyttefraOslo = 0
+replace flyttefraOslo = 1 if kom2016 == 4 & flytter == 1
+generate flyttefraBuskerud = 0
+replace flyttefraBuskerud = 1 if kom2016 == 2 & flytter == 1
+generate flyttefraØstfold= 0
+replace flyttefraØstfold = 1 if kom2016 == 1 & flytter == 1
+// kjører regresjonsmodeller. Avhengig variabel er å flytte til et fylke eller flytte fra det fylket.
+regress flyttetilAkershus uføre c.utdnivå i.innvandrere i.barn i.samboer i.formue500 c.alder18til25 c.alder26til40 c.alder40til60 i.andrearbeidssøkervariabler i.tiltak18 i.delvisledig18 i.arbledig18
+regress flyttetilOslo uføre c.utdnivå i.innvandrere i.barn i.samboer i.formue500 c.alder18til25 c.alder26til40 c.alder40til60 i.andrearbeidssøkervariabler i.tiltak18 i.delvisledig18 i.arbledig18
+regress flyttetilBuskerud uføre c.utdnivå i.innvandrere i.barn i.samboer i.formue500 c.alder18til25 c.alder26til40 c.alder40til60 i.andrearbeidssøkervariabler i.tiltak18 i.delvisledig18 i.arbledig18
+regress flyttetilØstfold uføre c.utdnivå i.innvandrere i.barn i.samboer i.formue500 c.alder18til25 c.alder26til40 c.alder40til60 i.andrearbeidssøkervariabler i.tiltak18 i.delvisledig18 i.arbledig18
+regress flyttefraAkershus uføre c.utdnivå i.innvandrere i.barn i.samboer i.formue500 c.alder18til25 c.alder26til40 c.alder40til60 i.andrearbeidssøkervariabler i.tiltak18 i.delvisledig18 i.arbledig18
+regress flyttefraOslo uføre c.utdnivå i.innvandrere i.barn i.samboer i.formue500 c.alder18til25 c.alder26til40 c.alder40til60 i.andrearbeidssøkervariabler i.tiltak18 i.delvisledig18 i.arbledig18
+regress flyttefraBuskerud uføre c.utdnivå i.innvandrere i.barn i.samboer i.formue500 c.alder18til25 c.alder26til40 c.alder40til60 i.andrearbeidssøkervariabler i.tiltak18 i.delvisledig18 i.arbledig18
+regress flyttefraØstfold uføre c.utdnivå i.innvandrere i.barn i.samboer i.formue500 c.alder18til25 c.alder26til40 c.alder40til60 i.andrearbeidssøkervariabler i.tiltak18 i.delvisledig18 i.arbledig18
+
+// Kjører regresjonsmodell med flere uavhengige variabøler og flytting er eneste avhengig variabel.
+regress flytter  c.høy_utd c.alder i.innvandrere i.Østfold21#i.uføre i.Buskerud21#i.uføre i.Oslo21#i.uføre i.Akershus21#i.uføre i.innvandrere#i.Oslo21 i.Oslo21#c.alder i.Oslo21#c.høy_utd i.Østfold21#c.høy_utd i.Akershus21#c.høy_utd i.Buskerud21#c.høy_utd  i.Østfold16#c.høy_utd i.innvandrere#i.Østfold16 i.innvandrere#i.Buskerud16 i.innvandrere#i.Resten16  i.Oslo16#i.barn i.Akershus21#i.barn i.Oslo21#i.barn i.Resten21#i.barn i.Østfold21#i.barn i.Buskerud21#i.barn i.barn i.uføre2017 i.uføre2017#i.Østfold21 i.uføre2017#i.Akershus21 i.uføre2017#i.Oslo21  i.Østfold21#alder18til25 i.Østfold21#i.alder26til40 c.alder18til25 c.alder26til40 c.alder40til60 i.samboer i.ugift  i.arbledig18 i.tiltak18 i.delvisledig18 i.tiltak18#i.Østfold21 i.tiltak18#i.Akershus21 i.arbledig18#i.Østfold21 i.samboer#i.Oslo21 i.samboer#i.Akershus21 i.samboer#i.Østfold21 i.tiltak18#i.Oslo21 i.arbledig18#i.Oslo21 i.Resten21#i.uføre
