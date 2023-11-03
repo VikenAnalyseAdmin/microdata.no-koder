@@ -1,0 +1,731 @@
+require no.ssb.fdb:20 as db
+ 
+textblock
+Inntektsdata
+------------ 
+endblock
+ 
+textblock
+To typer lønnsdata: SSBs inntektsstatistikk (INNTEKT_), og A-ordningen (ARBLONN_LONN_) 
+endblock
+ 
+create-dataset lønnsinnt1
+import db/INNTEKT_LONN 2021-12-31 as lønn
+import db/INNTEKT_WLONN 2021-12-31 as wlønn, outer_join
+import db/INNTEKT_YRKINNT 2021-12-31 as yrkinnt, outer_join
+import db/INNTEKT_WYRKINNT 2021-12-31 as wyrkinnt, outer_join
+import db/INNTEKT_PGIVINNT 2020-12-31 as pensjgiv_innt, outer_join
+ 
+textblock
+Lønns- og yrkesinntekter fra SSBs inntektsstatistikk (yrkesinntekt inkluderer netto næringsinntekter): 
+endblock
+summarize
+barchart(mean) lønn wlønn yrkinnt wyrkinnt pensjgiv_innt
+ 
+create-dataset lønnsinnt2
+import db/ARBLONN_LONN_TIME 2022-04-30 as arblonn_timelønn2204
+import db/ARBLONN_LONN_TIME 2022-03-30 as arblonn_timelønn2203, outer_join
+import db/ARBLONN_LONN_TIME 2022-02-28 as arblonn_timelønn2202, outer_join
+import db/ARBLONN_LONN_TIME 2022-01-30 as arblonn_timelønn2201, outer_join
+import db/ARBLONN_LONN_TIME 2021-12-30 as arblonn_timelønn2112, outer_join
+ 
+textblock
+Lønnsstatistikk fra A-ordningen (enhet = jobber, populasjon = arbeidstakere): Månedslønn for personer med avtalt timelønn 
+endblock
+summarize
+ 
+create-dataset lønnsinnt3
+import db/ARBLONN_LONN_TIME_INNRAPP 2022-04-30 as arblonn_timelønn2204
+import db/ARBLONN_LONN_TIME_INNRAPP 2022-03-30 as arblonn_timelønn2203, outer_join
+import db/ARBLONN_LONN_TIME_INNRAPP 2022-02-28 as arblonn_timelønn2202, outer_join
+import db/ARBLONN_LONN_TIME_INNRAPP 2022-01-30 as arblonn_timelønn2201, outer_join
+import db/ARBLONN_LONN_TIME_INNRAPP 2021-12-30 as arblonn_timelønn2112, outer_join
+ 
+textblock
+Lønnsstatistikk fra A-ordningen (enhet = jobber, populasjon = arbeidstakere): Månedslønn for personer med avtalt timelønn, innrapportert/ubearbeidet 
+endblock
+summarize
+ 
+create-dataset lønnsinnt4
+import db/ARBLONN_LONN_FAST 2022-04-30 as arblonn_fastlønn2204
+import db/ARBLONN_LONN_FAST 2022-03-30 as arblonn_fastlønn2203, outer_join
+import db/ARBLONN_LONN_FAST 2022-02-28 as arblonn_fastlønn2202, outer_join
+import db/ARBLONN_LONN_FAST 2022-01-30 as arblonn_fastlønn2201, outer_join
+import db/ARBLONN_LONN_FAST 2021-12-30 as arblonn_fastlønn2112, outer_join
+ 
+textblock
+Lønnsstatistikk fra A-ordningen (enhet = jobber, populasjon = arbeidstakere): Fastlønn (avtalt fastlønn inkl. honorar, akkord, prosent og provisjon) 
+endblock
+summarize
+ 
+import db/ARBEIDSFORHOLD_PERSON as personid
+create-dataset personer4
+import db/ARBLONN_PERS_KJOENN 2022-03-16 as kjønn
+merge kjønn into lønnsinnt4 on personid
+use lønnsinnt4
+ 
+textblock
+Kjønnsforskjeller: Kvinner har i gjennomsnitt 19% lavere lønn (21% uten SDC) 
+endblock
+tabulate kjønn, summarize(arblonn_fastlønn2203)
+barchart(mean) arblonn_fastlønn2203, over(kjønn)
+ 
+create-dataset lønnsinnt5
+import db/ARBLONN_LONN_FAST_INNRAPP 2022-04-30 as arblonn_fastlønn2204
+import db/ARBLONN_LONN_FAST_INNRAPP 2022-03-30 as arblonn_fastlønn2203, outer_join
+import db/ARBLONN_LONN_FAST_INNRAPP 2022-02-28 as arblonn_fastlønn2202, outer_join
+import db/ARBLONN_LONN_FAST_INNRAPP 2022-01-30 as arblonn_fastlønn2201, outer_join
+import db/ARBLONN_LONN_FAST_INNRAPP 2021-12-30 as arblonn_fastlønn2112, outer_join
+ 
+textblock
+Lønnsstatistikk fra A-ordningen (enhet = jobber, populasjon = arbeidstakere): Fastlønn, innrapportert/ubearbeidet 
+endblock
+summarize
+ 
+import db/ARBEIDSFORHOLD_PERSON as personid
+create-dataset personer5
+import db/ARBLONN_PERS_KJOENN 2022-03-16 as kjønn
+merge kjønn into lønnsinnt5 on personid
+use lønnsinnt5
+ 
+textblock
+Kjønnsforskjeller: Kvinner har i gjennomsnitt 20% lavere lønn (21% uten SDC) 
+endblock
+tabulate kjønn, summarize(arblonn_fastlønn2203)
+barchart(mean) arblonn_fastlønn2203, over(kjønn)
+ 
+create-dataset lønnsinnt6
+import db/ARBLONN_LONN_EKV_IALT 2022-03-30 as arblonn_hekv_lønn2203
+import db/ARBLONN_LONN_EKV_IALT 2022-02-28 as arblonn_hekv_lønn2202, outer_join
+import db/ARBLONN_LONN_EKV_IALT 2022-01-30 as arblonn_hekv_lønn2201, outer_join
+import db/ARBLONN_LONN_EKV_IALT 2021-12-30 as arblonn_hekv_lønn2112, outer_join
+ 
+textblock
+Lønnsstatistikk fra A-ordningen (enhet = jobber, populasjon = arbeidstakere): Heltidsekvivalent totallønn (inkl. tillegg og bonuser, men ikke overtidsgodtgjørelse) 
+endblock
+summarize
+ 
+import db/ARBEIDSFORHOLD_PERSON as personid
+create-dataset personer6
+import db/ARBLONN_PERS_KJOENN 2022-03-16 as kjønn
+merge kjønn into lønnsinnt6 on personid
+use lønnsinnt6
+ 
+textblock
+Kjønnsforskjeller: Kvinner har i gjennomsnitt 12% lavere lønn (13% uten SDC) 
+endblock
+tabulate kjønn, summarize(arblonn_hekv_lønn2203)
+barchart(mean) arblonn_hekv_lønn2203, over(kjønn)
+ 
+create-dataset lønnsinnt7
+import db/ARBLONN_LONN_EKV_FMLONN 2022-03-30 as arblonn_hekv_avtlønn2203
+import db/ARBLONN_LONN_EKV_FMLONN 2022-02-28 as arblonn_hekv_avtlønn2202, outer_join
+import db/ARBLONN_LONN_EKV_FMLONN 2022-01-30 as arblonn_hekv_avtlønn2201, outer_join
+import db/ARBLONN_LONN_EKV_FMLONN 2021-12-30 as arblonn_hekv_avtlønn2112, outer_join
+ 
+textblock
+Lønnsstatistikk fra A-ordningen (enhet = jobber, populasjon = arbeidstakere): Heltidsekvivalent avtalt lønn 
+endblock
+summarize
+ 
+import db/ARBEIDSFORHOLD_PERSON as personid
+create-dataset personer7
+import db/ARBLONN_PERS_KJOENN 2022-03-16 as kjønn
+merge kjønn into lønnsinnt7 on personid
+use lønnsinnt7
+ 
+textblock
+Kjønnsforskjeller: Kvinner har i gjennomsnitt 12% lavere lønn (12% uten SDC) 
+endblock
+tabulate kjønn, summarize(arblonn_hekv_avtlønn2203)
+barchart(mean) arblonn_hekv_avtlønn2203, over(kjønn)
+ 
+create-dataset lønnsinnt8
+import db/ARBLONN_LONN_KONTANT 2022-04-30 as arblonn_kontantlønn2204
+import db/ARBLONN_LONN_KONTANT 2022-03-30 as arblonn_kontantlønn2203, outer_join
+import db/ARBLONN_LONN_KONTANT 2022-02-28 as arblonn_kontantlønn2202, outer_join
+import db/ARBLONN_LONN_KONTANT 2022-01-30 as arblonn_kontantlønn2201, outer_join
+import db/ARBLONN_LONN_KONTANT 2021-12-30 as arblonn_kontantlønn2112, outer_join
+ 
+textblock
+Lønnsstatistikk fra A-ordningen (enhet = jobber, populasjon = arbeidstakere): Kontantlønn (lønn inkl. tillegg, bonuser, overtidsgodtgjørelser, sluttvederlag) 
+endblock
+summarize
+ 
+import db/ARBEIDSFORHOLD_PERSON as personid
+create-dataset personer8
+import db/ARBLONN_PERS_KJOENN 2022-03-16 as kjønn
+merge kjønn into lønnsinnt8 on personid
+use lønnsinnt8
+ 
+textblock
+Kjønnsforskjeller: Kvinner har i gjennomsnitt 25% lavere lønn (28% uten SDC) 
+endblock
+tabulate kjønn, summarize(arblonn_kontantlønn2203)
+barchart(mean) arblonn_kontantlønn2203, over(kjønn)
+ 
+ 
+textblock
+To typer data om totalinntekter: SSBs inntektsstatistikk (INNTEKT_) og SSBs skattestatistikk (SKATT_) 
+endblock
+ 
+create-dataset totinnt
+import db/INNTEKT_WSAMINNT 2021-12-31 as samlet_inntekt
+import db/INNTEKT_WIES 2021-12-31 as innt_etter_skatt, outer_join
+import db/INNTEKT_UTSKATT 2021-12-31 as skatt, outer_join
+import db/INNTEKT_WSKATOVF 2021-12-31 as skatt_og_overføringer, outer_join
+generate utregnet_skatt = samlet_inntekt - innt_etter_skatt
+import db/SKATT_ALMINNELIG_INNTEKT 2021-12-31 as alminnelig_inntekt, outer_join
+import db/SKATT_BRUTTOINNTEKT 2021-12-31 as bruttoinntekt, outer_join
+generate utregnet_skatt2 = bruttoinntekt - alminnelig_inntekt
+ 
+textblock
+Totale inntekter, brutto og netto: 
+endblock
+summarize
+ 
+textblock
+Det finnes også data på trygdeinntekter fra SSBs inntektsstatistikk som kan brukes til å kartlegge trygdemottakere 
+endblock
+ 
+create-dataset trygdeinntekter
+import db/INNTEKT_BARNETRYGD 2021-12-31 as barnetrygd
+import db/INNTEKT_KONTANTSTOTTE 2021-12-31 as kontantstøtte, outer_join
+import db/INNTEKT_FORELDREPENGER 2021-12-31 as foreldrepenger, outer_join
+import db/INNTEKT_SYKEPENGER 2021-12-31 as sykepenger, outer_join
+import db/INNTEKT_ARBLED 2021-12-31 as dagpenger, outer_join
+import db/INNTEKT_SUM_ARBAVKL 2021-12-31 as arbeidsavklpenger, outer_join
+import db/INNTEKT_KODE218 2021-12-31 as uføretrygd, outer_join
+import db/INNTEKT_GRUNN_HJELP 2021-12-31 as grunn_og_hjelpestønad, outer_join
+import db/INNTEKT_BOSTOTTE 2021-12-31 as bostøtte, outer_join
+import db/INNTEKT_SOSIAL 2021-12-31 as sosialhjelp, outer_join
+import db/INNTEKT_STUDIESTIPEND 2021-12-31 as studiestipend, outer_join
+import db/INNTEKT_OVERFOR 2021-12-31 as overføringer, outer_join
+import db/INNTEKT_WOVERFOR 2021-12-31 as woverføringer, outer_join
+ 
+ 
+ 
+textblock
+Trygdeinntekter fra SSBs inntektsstatistikk (holder pensjoner utenom): 
+endblock
+summarize
+barchart(mean) barnetrygd kontantstøtte foreldrepenger sykepenger dagpenger arbeidsavklpenger uføretrygd grunn_og_hjelpestønad bostøtte sosialhjelp studiestipend overføringer woverføringer
+barchart(count) barnetrygd kontantstøtte foreldrepenger sykepenger dagpenger arbeidsavklpenger uføretrygd grunn_og_hjelpestønad bostøtte sosialhjelp studiestipend overføringer woverføringer
+ 
+textblock
+SDC-effekt på gjennomsnittstall:
+
+Gjennomsnittstall blir gjennomgående lavere pga. at ekstremverdier toppkodes. Effekten varierer etter hvordan verdifordelingene ser ut: 
+
+- Høyrevridd fordeling => større effekt 
+- Normalfordelt eller venstrevridd fordeling => mindre effekt
+
+- Lønn og yrkesinntekter (årsbeløp): -1,7 - -2,2%
+- Lønn og yrkesinntekter (månedsbeløp): -0,5 - -1,8%  
+   -- unntak: kontantlønn: -1,5 - -4,1%
+- Samlet inntekt og skatt (årsbeløp): -2,9 - -6,6%
+- Trygd (årsbeløp): -0,1 - -1,2%
+- Husholdningsinntekt etter skatt (årsbeløp): -2,1 - -2,2%
+
+Månedsbeløp og trygd har mindre spredning => mindre avvik
+
+Totalinntekter har større spredning => større avvik
+
+Kjønnsforskjeller blir noe lavere pga. menn i større grad har ekstremverdier som toppkodes 
+endblock
+ 
+textblock
+Også netto totalinntekt for husholdninger er tilgjengelig 
+endblock
+create-dataset husholdningsinntekter
+import db/INNTEKT_HUSH_IES 2021-12-31 as hushinnt_etter_skatt
+import db/INNTEKT_HUSH_IES_EU 2021-12-31 as hushinnt_etter_skatt_per_forbruksenhet, outer_join
+textblock
+Husholdningsinntekter fra SSBs inntektsstatistikk: 
+endblock
+summarize
+ 
+textblock
+Trygdedata
+------------
+
+Det er flere måter å kartlegge jobb-, utdanning og trygdestatus på:
+
+a) Årlige inntektsdata knyttet til jobb, trygd eller andre støtteordninger
+
+b) Trygdestatus m.m. fra FD-Trygd, kursdata fra NUDB, samt jobbstatus fra REGSYS eller ARBLONN
+
+Nedenfor demonstrerer vi de ulike fremgangsmåtene 
+endblock
+ 
+textblock
+a) Inntektsdata som indikatorer for arbeidsmarkeds- og trygdestatus 
+endblock
+create-dataset overganger
+import db/BEFOLKNING_STATUSKODE 2021-01-01 as regstat2
+import db/BEFOLKNING_STATUSKODE 2016-01-01 as regstat1
+//import db/BEFOLKNING_STATUSKODE 2020-01-01 as regstat2
+import db/BEFOLKNING_FOEDSELS_AAR_MND as fdato
+generate alder = 2021 - int(fdato/100)
+//keep if regstat1 == '1' & alder >= 18
+keep if alder >=13
+keep if regstat1 != '5'
+//BØR KANSKJE ENDRES TIL 2020 eller være på 2015/2016
+//import db/NUDB_AAR_FORSTE_FULLF_HOV as fullført_master
+//generate master = 0
+//replace master = 1 if int(fullført_master/100) == 2021
+// VELDIG VIKTIG at regstat2 kommer før regstat1, ellers blir befolkningen i regstat2 annulert av de som ikke
+//Også finnes i regstat1. Jeg fjernet de som var døde i regstat1, da hoppet døde fra over 3 mill i regstat2
+// til 165k. !! Også økte regstat2 fra 3,7 mill til 4,3 mill. Likevel færre enn regstat1... ???
+ 
+ 
+ 
+import db/INNTEKT_WYRKINNT 2016-12-31 as wyrkinnt15
+import db/INNTEKT_ARBLED 2016-12-31 as dagpenger15
+import db/INNTEKT_SUM_ARBAVKL 2016-12-31 as arbeidsavklpenger15
+import db/INNTEKT_KODE218 2016-12-31 as uføretrygd15
+import db/INNTEKT_BOSTOTTE 2016-12-31 as bostøtte15
+import db/INNTEKT_SOSIAL 2016-12-31 as sosialhjelp15
+import db/INNTEKT_STUDIESTIPEND 2016-12-31 as stipend15
+import db/INNTEKT_WYRKINNT 2021-12-31 as wyrkinnt20
+import db/INNTEKT_ARBLED 2021-12-31 as dagpenger20
+import db/INNTEKT_SUM_ARBAVKL 2021-12-31 as arbeidsavklpenger20
+import db/INNTEKT_KODE218 2021-12-31 as uføretrygd20
+import db/INNTEKT_BOSTOTTE 2021-12-31 as bostøtte20
+import db/INNTEKT_SOSIAL 2021-12-31 as sosialhjelp20
+import db/INNTEKT_STUDIESTIPEND 2021-12-31 as stipend20
+textblock
+a1) Flyttedata 
+endblock
+//create-dataset flytting
+ 
+import db/BEFOLKNING_FOEDEKOMMNR as fødekommune
+clone-variables fødekommune -> FødtØstfold
+destring FødtØstfold, force
+recode FødtØstfold (101/138 = 1'Østfold')
+recode FødtØstfold (1001/5444 203 211/2030 = 0 'Resten-av-landet')
+tabulate FødtØstfold
+
+
+import db/BEFOLKNING_KOMMNR_FAKTISK 2016-01-01 as Komreg15
+import db/BEFOLKNING_KOMMNR_FAKTISK 2021-01-01 as Komreg20
+ 
+//import ds/BEFOLKNING_KOMMNR_FAKTISK 2021-01-01 as bosted
+generate fylke15 = substr(Komreg15, 1, 2)
+generate fylke20 = substr(Komreg20, 1, 2)
+//generate kom = substr(bosted, 1, 4)
+//keep if fylke15 == '30' | fylke15 == '01' |fylke15 == '02' | fylke15 == '06'| fylke15 == '03'
+//keep if fylke20 == '30' | fylke20 == '01' |fylke20 == '02' | fylke20 == '06'| fylke20 == '03'
+clone-variables Komreg15 -> Østfold15
+destring Østfold15
+recode Østfold15 (101/138 = 1'Østfold')
+recode Østfold15 (211/2030 = 0 'Resten-av-landet')
+tabulate Østfold15
+ 
+clone-variables Komreg15 -> NedreGlomma15
+destring NedreGlomma15
+recode NedreGlomma15 (0105/0111 0128 = 1'Nedre Glomma')
+recode NedreGlomma15 (0101/0104 0118/2030 = 0 'Resten av landet')
+tabulate NedreGlomma15
+tabulate NedreGlomma15, rowpct
+tabulate NedreGlomma15, colpct
+ 
+clone-variables Komreg15 -> Mossereg15
+destring Mossereg15
+recode Mossereg15 (0104 0135/0137 = 1 'Mosseregionen')
+recode Mossereg15 (0101 0105/0128 0138/2030 = 0 'Resten av landet')
+tabulate Mossereg15
+ 
+clone-variables Komreg15 -> HaldenAremark15
+destring HaldenAremark15
+recode HaldenAremark15 (0101 0118 = 1 'Halden Aremark')
+recode HaldenAremark15 (0104/0111 0119/2030 = 0 'Resten av landet')
+tabulate HaldenAremark15
+ 
+//recode Østfold15 (0101/0119 0122/0138 = 1'Østfold')
+ 
+clone-variables Komreg15 -> Oslo15
+destring Oslo15
+recode Oslo15 (0301 = 1 'Oslo')
+recode Oslo15 (0101/0239 0402/2030 = 0 'Resten av landet')
+ 
+clone-variables Komreg15 -> Akershus15
+destring Akershus15
+recode Akershus15 (0211/0239 = 1 'Akershus')
+recode Akershus15(0101/0138 0301/2030 = 0 'Resten av landet')
+ 
+clone-variables Komreg15 -> Buskerud15
+destring Buskerud15
+recode Buskerud15 (0602/0633 = 1 'Buskerud')
+recode Buskerud15 (0101/0545 0701/2030 = 0 'Resten av landet')
+ 
+clone-variables Komreg20 -> Østfold20
+destring Østfold20
+recode Østfold20 (3001/3004 3011/3018 = 1'Østfold')
+recode Østfold20 (0301/1875 3005/3007 3019/5444 = 0 'Resten av landet' )
+tabulate Østfold20
+ 
+clone-variables Komreg20 -> NedreGlomma20
+destring NedreGlomma20
+recode NedreGlomma20 (3003/3004 3011 3016 = 1'Nedre Glomma')
+recode NedreGlomma20 (0301/1875 3001/3002 3005/3015 3017/5444 = 0 'Resten av landet')
+tabulate NedreGlomma20
+tabulate NedreGlomma20, rowpct
+tabulate NedreGlomma20, colpct
+ 
+clone-variables Komreg20 -> Mossereg20
+destring Mossereg20
+recode Mossereg20 (3002 3017/3018 = 1 'Mosseregionen')
+recode Mossereg20 (0301/1875 3001 3003/3016 3019/5444 = 0 'Resten av landet')
+tabulate Mossereg20
+ 
+clone-variables Komreg20 -> HaldenAremark20
+destring HaldenAremark20
+recode HaldenAremark20 (3001 3012 = 1 'Halden Aremark')
+recode HaldenAremark20 (0301/1875 2111 2580 3002/3011 3013/5444 = 0 'Resten av landet')
+tabulate HaldenAremark20
+ 
+clone-variables Komreg20 -> Oslo20
+destring Oslo20
+recode Oslo20 (0301 = 1 'Oslo')
+recode Oslo20 (1101/1875 2111 2580 3001/5444 = 0 'Resten av landet')
+ 
+clone-variables Komreg20 -> Akershus20
+destring Akershus20
+recode Akershus20 (3019/3037 = 1 'Akershus')
+recode Akershus20 (0301/1875 3001/3018 3038/5444 = 0 'Resten av landet')
+ 
+clone-variables Komreg20 -> Buskerud20
+destring Buskerud20
+recode Buskerud20 (3005/3007 3038/3054 = 1 'Buskerud')
+recode Buskerud20 (0301 1101/1875 3001/3004 3011/3037 3401/5444 = 0 'Resten av landet')
+ 
+clone-variables Komreg15 -> Viken15
+destring Viken15
+recode Viken15 (0101/0239 0532/0533 0602/0633 = 1 'Viken')
+recode Viken15 (0301 0534/0545 0701/2580 = 0 'Resten av landet')
+
+clone-variables Komreg20 -> Viken20
+destring Viken20
+recode Viken20 (3001/3054 = 1 'Viken')
+recode Viken20 (0301 1101/1875 2580 3401/5444 = 0 'Resten av landet')
+
+generate TilØstfold20 = 0
+replace TilØstfold20 = 1 if Østfold15 == 0 & Østfold20 == 1
+generate FraØstfold20 = 0
+replace FraØstfold20 = 1 if Østfold15 == 1 & Østfold20 == 0
+generate Østfold1520 = 0
+replace Østfold1520 = 1 if Østfold15 == 1 & Østfold20 == 1
+ 
+ 
+//generate fødtØstfold = 0 Kun hvis vi ikke skal clone-variables
+//clone-variables fødekommune -> fødtØstfold
+//recode fødtØstfold = ( 0101/0119 0122/0138 = 1'Østfold')
+// Nåværende kommuner: (3001/3004  3011/3018 = 1'Østfold')
+ 
+//tabulate fødtØstfold
+ 
+//destring kom
+//clone-variables kom -> økreg
+//recode økreg (3001 3012 = 1 'Halden') (3003 3004 3011 3017 = 2 'Fredrikstad/Sarpsborg') (3002 3018 = 3 'Moss') (3013/3016 = 4 'Indre Østfold') (3019/3023 3028 = 5 'Follo') (3026 3027 3029/3034 3054 = 6 'Lillestrøm') (3033 3035/3037 = 7 'Ullensaker/Eidsvoll') (3024 3025 = 8 'Asker/Bærum') (3007 3038 3046 3053 = 9 'Hønefoss') (3005 3045 3046/3049 = 10 'Drammen') (3006 3050/3052 = 11 'Kongsberg') (3039/3044 = 12 'Hallingdal') (3401 3414/3417 = 13 'Kongsvinger')
+ 
+//recode fødtØstfold = "Østfold" if fødekommune == "0101 - Halden" & "0102 - Sarpsborg"
+//tabulate fødtØstfold
+ 
+summarize
+histogram wyrkinnt15
+histogram wyrkinnt20
+// Høy inntekt = 40% over medianen i landet, middels høy er fra median til høy, middels lav median til lav.
+// Lav er 40% av median eller lavere
+generate status15 = 99 if alder >=23 & alder <=72
+replace status15 = 1 if wyrkinnt15 > 670000
+//replace status15 = 1 if wyrkinnt15 > 500000
+replace status15 = 2 if wyrkinnt15 > 582000 & wyrkinnt15 <= 670000
+// replace status15 = 2 if wyrkinnt15 > 200000 & wyrkinnt15 <= 500000
+replace status15 = 3 if wyrkinnt15 > 387000 & wyrkinnt15 <= 582000
+replace status15 = 4 if wyrkinnt15 > 195000 & wyrkinnt15 <= 387000
+//replace status15 = 3 if wyrkinnt15 > 40000 & wyrkinnt15 <= 200000
+replace status15 = 5 if wyrkinnt15 > 40000 & wyrkinnt15 <= 195000
+replace status15 = 6 if dagpenger15 > 20000
+replace status15 = 7 if arbeidsavklpenger15 > 20000
+replace status15 = 8 if uføretrygd15 > 20000
+replace status15 = 9 if bostøtte15+sosialhjelp15 > 50000
+replace status15 = 90 if stipend15 > 20000
+replace status15 = 91 if regstat1 == '3'
+replace status15 = 92 if alder < 23 & alder > 72
+
+ 
+generate status20 = 99 if alder >=18 & alder <=67
+replace status20 = 91 if regstat2 != '1'
+replace status20 = 1 if wyrkinnt20 > 765000
+//replace status20 = 1 if wyrkinnt20 > 600000
+replace status20 = 2 if wyrkinnt20 > 656000 & wyrkinnt20 <= 765000
+//replace status20 = 2 if wyrkinnt20 > 300000 & wyrkinnt20 <= 600000
+replace status20 = 3 if wyrkinnt20 > 437000 & wyrkinnt20 <= 656000
+replace status20 = 4 if wyrkinnt20 > 230000 & wyrkinnt20 <= 437000
+replace status20 = 5 if wyrkinnt20 > 50000 & wyrkinnt20 <= 230000
+//replace status20 = 3 if wyrkinnt20 > 50000 & wyrkinnt20 <= 300000
+replace status20 = 6 if dagpenger20 > 20000
+replace status20 = 7 if arbeidsavklpenger20 > 20000
+replace status20 = 8 if uføretrygd20 > 20000
+replace status20 = 9 if bostøtte20+sosialhjelp20 > 50000
+replace status20 = 90 if stipend20 > 20000
+replace status20 = 92 if alder <18 & alder >67
+
+// tror aldersgreiene er bare å fjerne. Den tolker alder riktig iht år uavhengig av kødd. 
+// Alternativt lager jeg et datasett hvor de som tjener mindre enn noe blir utenfor arbeidsstyrken
+ 
+//generate Høy = 1 if wyrkinnt20 > 770000
+//generate Midhøy = 1 if wyrkinnt20 > 660000
+//generate Mid = 1 if wyrkinnt20 > 440000
+//generate Lav = 1 if wyrkinnt20 > 220000
+ 
+ 
+define-labels statuskoder 1 "Høy inntekt" 2 "Middels høy" 3 "Middels inntekt" 4 "Middels lav" 5 "Lav inntekt" 6 Dagpenger 7 Arbeidsavklaring 8 Ufør 9 Sosial 90 Student 91 "Død eller emigrert" 92 gamleunge 99 Annet
+assign-labels status15 statuskoder
+assign-labels status20 statuskoder
+ 
+tabulate status15
+tabulate status20
+//Status 2015
+tabulate status15 if status15!=92 & Østfold15== 1, freq cellpct
+tabulate status20 if status20!=92&Østfold20== 1, freq cellpct
+tabulate status20 if status20!=92 & Østfold15== 0 & Østfold20 == 1, freq cellpct
+tabulate status20 if status20!=92 & Østfold15== 1 & Østfold20 == 0, freq cellpct
+tabulate status20 if status20!=92 & Østfold15== 1 & Østfold20 == 1, freq cellpct
+
+tabulate status15 if status15!=92 & NedreGlomma15== 1, freq cellpct
+tabulate status20 if status20!=92&NedreGlomma20== 1, freq cellpct
+tabulate status20 if status20!=92 & NedreGlomma15== 0 & NedreGlomma20 == 1, freq cellpct
+tabulate status20 if status20!=92 &NedreGlomma15== 1 & NedreGlomma20 == 0, freq cellpct
+tabulate status20 if status20!=92 &NedreGlomma15== 1 & NedreGlomma20 == 1, freq cellpct
+
+tabulate status15 if status15!=92 & Mossereg15== 1, freq cellpct
+tabulate status20 if status20!=92&Mossereg20== 1, freq cellpct
+tabulate status20 if status20!=92 & Mossereg15== 0 & Mossereg20 == 1, freq cellpct
+tabulate status20 if status20!=92 &Mossereg15== 1 & Mossereg20 == 0, freq cellpct
+tabulate status20 if status20!=92 &Mossereg15== 1 & Mossereg20 == 1, freq cellpct
+
+tabulate status15 if status15!=92 & HaldenAremark15== 1, freq cellpct
+tabulate status20 if status20!=92&HaldenAremark20== 1, freq cellpct
+tabulate status20 if status20!=92 & HaldenAremark15== 0 & HaldenAremark20 == 1, freq cellpct
+tabulate status20 if status20!=92 &HaldenAremark15== 1 & HaldenAremark20 == 0, freq cellpct
+tabulate status20 if status20!=92 &HaldenAremark15== 1 & HaldenAremark20 == 1, freq cellpct
+
+tabulate status15 if status15!=92 & Akershus15== 1, freq cellpct
+tabulate status20 if status20!=92&Akershus20== 1, freq cellpct
+tabulate status20 if status20!=92 & Akershus15== 0 & Akershus20 == 1, freq cellpct
+tabulate status20 if status20!=92 &Akershus15== 1 & Akershus20 == 0, freq cellpct
+tabulate status20 if status20!=92 &Akershus15== 1 & Akershus20 == 1, freq cellpct
+
+tabulate status15 if status15!=92 & Buskerud15== 1, freq cellpct
+tabulate status20 if status20!=92& Buskerud20== 1, freq cellpct
+tabulate status20 if status20!=92 & Buskerud15== 0 & Buskerud20 == 1, freq cellpct
+tabulate status20 if status20!=92 & Buskerud15== 1 & Buskerud20 == 0, freq cellpct
+tabulate status20 if status20!=92 & Buskerud15== 1 & Buskerud20 == 1, freq cellpct
+
+tabulate status15 if status15!=92 & Oslo15== 1, freq cellpct
+tabulate status20 if status20!=92& Oslo20== 1, freq cellpct
+tabulate status20 if status20!=92 & Oslo15== 0 & Oslo20 == 1, freq cellpct
+tabulate status20 if status20!=92 & Oslo15== 1 & Oslo20 == 0, freq cellpct
+tabulate status20 if status20!=92 & Oslo15== 1 & Oslo20 == 1, freq cellpct
+
+tabulate status15 if status15!=92 & status15!=91, freq cellpct
+tabulate status20 if status20!=92 & status20!=91, freq cellpct
+// For landet kunne jeg ikke inkludere død-emigrert fordi det utgjorde nesten 20%, aner ikke hvorfor
+tabulate status15 if status15!=92 & Viken15== 1, freq cellpct
+tabulate status20 if status20!=92& Viken20== 1, freq cellpct
+tabulate status20 if status20!=92 & Viken15== 0 & Viken20 == 1, freq cellpct
+tabulate status20 if status20!=92 & Viken15== 1 & Viken20 == 0, freq cellpct
+tabulate status20 if status20!=92 & Viken15== 1 & Viken20 == 1, freq cellpct 
+
+
+tabulate status15 if status15!=92 & Oslo15== 1, freq cellpct
+tabulate status20 if status20!=92& Oslo20== 1, freq cellpct
+tabulate status15 if Oslo15 == 1, freq cellpct
+histogram alder if Østfold20 == 1 & status20 == 99 
+histogram alder if Østfold15 == 1 & status15 == 99 
+tabulate status15 if Akershus15 == 1, freq cellpct
+tabulate status15 if Buskerud15 == 1, freq cellpct
+tabulate status15 if NedreGlomma15== 1, freq cellpct
+tabulate status15 if Mossereg15== 1, freq cellpct
+tabulate status15 if HaldenAremark15== 1, freq cellpct
+// og 2020
+tabulate status20 if Østfold20== 1, freq cellpct
+tabulate status20 if Oslo20== 1, freq cellpct
+tabulate status20 if Akershus20== 1, freq cellpct
+tabulate status20 if Buskerud20== 1, freq cellpct
+tabulate status20 if NedreGlomma20== 1, freq cellpct
+tabulate status20 if Mossereg20== 1, freq cellpct
+tabulate status20 if HaldenAremark20== 1, freq cellpct
+//sankey master status20 if master
+ 
+textblock
+Bosatte personer > 25 år i 2015 og status 5 år senere. Kilde: SSBs inntektsstatistikk og NUDB 
+endblock
+//tabulate status20 master, colpct
+ 
+textblock
+Bosatte personer > 20 år med fullført masterutdanning i 2015 og status 5 år senere. Kilde: SSBs inntektsstatistikk og NUDB 
+endblock
+//sankey master status20 if master
+ 
+textblock
+Bosatte personer > 25 år uten fullført masterutdanning i 2015 og status 5 år senere. Kilde: SSBs inntektsstatistikk og NUDB 
+endblock
+//sankey master status20 if master == 0
+ 
+textblock
+Status for bosatte personer > 25 år i 2015 og 5 år senere. Kilde: SSBs inntektsstatistikk og NUDB 
+endblock
+tabulate status15 status20, rowpct
+sankey status15 status20
+sankey status15 status20 if Østfold15 == 1
+sankey status15 status20 if Østfold20 == 1
+sankey status15 status20 if Østfold15 == 0
+sankey status15 status20 if Østfold15 == 0 & Østfold20 == 1
+sankey status15 status20 if Østfold15 == 1 & Østfold20 == 1
+sankey status15 status20 if Østfold15 == 1 & Østfold20 == 0
+//Samme for Oslo
+sankey status15 status20 if Oslo15 == 1
+sankey status15 status20 if Oslo20 == 1
+sankey status15 status20 if Oslo15 == 0
+sankey status15 status20 if Oslo15 == 0 & Oslo20 == 1
+sankey status15 status20 if Oslo15 == 1 & Oslo20 == 1
+sankey status15 status20 if Oslo15 == 1 & Oslo20 == 0
+//Samme for buskebuske
+sankey status15 status20 if Buskerud15 == 1
+sankey status15 status20 if Buskerud20 == 1
+sankey status15 status20 if Buskerud15 == 0
+sankey status15 status20 if Buskerud15 == 0 & Buskerud20 == 1
+sankey status15 status20 if Buskerud15 == 1 & Buskerud20 == 1
+sankey status15 status20 if Buskerud15 == 1 & Buskerud20 == 0
+// Samme for Aker
+sankey status15 status20 if Akershus15 == 1
+sankey status15 status20 if Akershus20 == 1
+sankey status15 status20 if Akershus15 == 0
+sankey status15 status20 if Akershus15 == 0 & Akershus20 == 1
+sankey status15 status20 if Akershus15 == 1 & Akershus20 == 1
+sankey status15 status20 if Akershus15 == 1 & Akershus20 == 0
+// Nedre glommen
+sankey status15 status20 if NedreGlomma15 == 1
+sankey status15 status20 if NedreGlomma20 == 1
+sankey status15 status20 if NedreGlomma15 == 0
+sankey status15 status20 if NedreGlomma15 == 0 & NedreGlomma20 == 1
+sankey status15 status20 if NedreGlomma15 == 1 & NedreGlomma20 == 1
+sankey status15 status20 if NedreGlomma15 == 1 & NedreGlomma20 == 0
+//Mossereg
+sankey status15 status20 if Mossereg15 == 1
+sankey status15 status20 if Mossereg20 == 1
+sankey status15 status20 if Mossereg15 == 0
+sankey status15 status20 if Mossereg15 == 0 & Mossereg20 == 1
+sankey status15 status20 if Mossereg15 == 1 & Mossereg20 == 1
+sankey status15 status20 if Mossereg15 == 1 & Mossereg20 == 0
+ 
+sankey status15 status20 if HaldenAremark15 == 1
+sankey status15 status20 if HaldenAremark20 == 1
+sankey status15 status20 if HaldenAremark15 == 0
+sankey status15 status20 if HaldenAremark15 == 0 & HaldenAremark20 == 1
+sankey status15 status20 if HaldenAremark15 == 1 & HaldenAremark20 == 1
+sankey status15 status20 if HaldenAremark15 == 1 & HaldenAremark20 == 0
+ 
+//Eksport, tror vi må bruker regstat2 her for mer presist og mer meningsfult resultat fordi da kontrollerer vi for deres bosted i 2020 som utgangspunkt! :)
+sankey status15 status20 if Østfold15 == 0 & Østfold20 == 1
+barchart (count) TilØstfold20 if status20==1 & TilØstfold20 == 1, by(alder)
+barchart (count) TilØstfold20 if status20==3 & TilØstfold20 == 1, by(alder)
+barchart (count) FraØstfold20 if status20==1 & FraØstfold20 == 1, by(alder)
+barchart (count) FraØstfold20 if status20==3 & FraØstfold20 == 1, by(alder)
+// HVOR JOBBER DE? JOBBER DE I ØSTFOLD?
+ 
+sankey status15 status20 if Østfold15 == 1 & Østfold20 == 1
+sankey status15 status20 if Østfold15 == 1 & Østfold20 == 0
+sankey status15 status20 if Østfold15 == 0 & Østfold20 == 1
+sankey status15 status20 if Østfold20 == 1
+barchart (count) Østfold20 if status20==99, by(alder)
+tabulate status20 if Østfold20 == 1
+tabulate status20 if Østfold20 == 1, cellpct
+tabulate status20 if Østfold20 == 1& Østfold15 == 1, cellpct
+tabulate status20 if Østfold20 == 1& Østfold15 == 1, cellpct freq
+tabulate status20 if Østfold20 == 1& Østfold15 == 0, cellpct freq
+barchart (count) Østfold20 if Østfold15==0 & Østfold20==1, by(alder)
+barchart (count) Østfold20 if Østfold15==1 & Østfold20==1, by(alder)
+tabulate status20 if Østfold20 == 0& Østfold15 == 1, cellpct freq
+barchart (count) Østfold20 if Østfold15==1 & Østfold20==0, by(alder)
+tabulate status20 if Østfold20 == 0& Østfold15 == 1, freq
+tabulate status20 if Østfold20 == 1& Østfold15 == 1, freq
+tabulate status20 if Østfold20 == 1& Østfold15 == 0, freq
+tabulate status20 if Østfold15 == 1, freq cellpct
+tabulate status20 if Østfold20 == 1, freq cellpct
+tabulate status15 if Østfold15 == 1, freq cellpct
+tabulate status15 if Østfold15 == 1, freq cellpct
+tabulate status15 if Østfold15 == 1, freq
+tabulate status20 if Østfold20 == 1, freq
+// sankey status15 status20 if regstat2 ==1
+// tabulate status20 if regstat2 ==1
+// tabulate status20 if regstat2 ==1 & regstat1==1
+tabulate status20 if regstat2 =="1" & regstat1=="1"
+tabulate status20 if regstat2 =="1" & regstat1=="1", cellpct
+tabulate status20 if regstat2 =="1" & regstat1 !="5", cellpct
+// histogram alder if status20== "99"
+// barchart (count) regstat2 if Østfold15==1 & Østfold20==0 & regstat2 ==1, by(alder)
+// barchart (count) regstat2 if Østfold20==1 & Østfold20==0 & regstat2 ==1, by(alder)
+// barchart (count) regstat2 if regstat2 ==1, by(alder)
+// barchart (count) status20 if regstat2 ==1 & status20=="99", by(alder)
+// barchart (count) status20 if status20 == "99", by(alder)
+barchart (count) status20, by(alder)
+keep if alder < 68
+barchart (count) status20, by(alder)
+barchart (count) status15, by(alder)
+tabulate status20 if regstat2 =="1" & regstat1 !="5", cellpct
+// tabulate status20 if regstat2 =="1" & regstat2 !="3", cellpct
+tabulate status20 if regstat2 =="1", cellpct
+
+
+tabulate status20 if NedreGlomma20 == 1 
+sankey status15 status20 if NedreGlomma15 == 0 & NedreGlomma20 == 1
+sankey status15 status20 if NedreGlomma15 == 1 & NedreGlomma20 == 0
+
+tabulate status20 if Østfold20 == 1& Østfold15 == 0 & status20 == 8 & status15 == 8, freq 
+
+tabulate status20 if status20==8 & Østfold15==0 & Akershus15 == 1 & Østfold20 == 1, freq
+tabulate status20 if status20==8 & Østfold15==0 & Buskerud15 == 1 & Østfold20 == 1, freq
+tabulate status20 if status20==8 & Østfold15==0 & Oslo15 == 1 & Østfold20 == 1, freq
+tabulate status20 if status20==8 & Østfold15==0 & Buskerud15== 0 & Akershus15 == 0 & Oslo15 ==0 & Østfold20 == 1, freq
+
+tabulate status20 if status20==8 & Østfold15==1 & Akershus20 == 1 & Østfold20 == 0, freq
+tabulate status20 if status20==8 & Østfold15==1 & Buskerud20 == 1 & Østfold20 == 0, freq
+tabulate status20 if status20==8 & Østfold15==1 & Oslo20 == 1 & Østfold20 == 0, freq
+tabulate status20 if status20==8 & Østfold15==1 & Buskerud20== 0 & Akershus20 == 0 & Oslo20 ==0 & Østfold20 == 0, freq
+
+tabulate status20 if Østfold20 == 0& Østfold15 == 1, freq
+tabulate status20 if Østfold20 == 1& Østfold15 == 0, freq
+tabulate status20 if Østfold20 == 1& Østfold15 == 1, freq
+tabulate status15 if Østfold15 == 1
+tabulate status20 if Østfold20 == 1
+tabulate status20 if Oslo20 == 0& Oslo15 == 1, freq
+tabulate status20 if Oslo20 == 1& Oslo15 == 0, freq
+tabulate status15 if Oslo15 == 1
+tabulate status20 if Oslo20 == 1
+tabulate status20 if Akershus20 == 0& Akershus15 == 1, freq
+tabulate status20 if Akershus20 == 1& Akershus15 == 0, freq
+tabulate status20 if Akershus20 == 1& Akershus15 == 1, freq
+tabulate status15 if Akershus15 == 1
+tabulate status20 if Akershus20 == 1
+tabulate status20 if Buskerud20 == 0& Buskerud15 == 1, freq
+tabulate status20 if Buskerud20 == 1& Buskerud15 == 0, freq
+tabulate status20 if Buskerud20 == 1& Buskerud15 == 1, freq
+tabulate status15 if Buskerud15 == 1
+tabulate status20 if Buskerud20 == 1
+tabulate status20 if Viken20 == 1 & Viken15 == 0, freq
+tabulate status20 if Viken20 == 0 & Viken15 == 1, freq
+tabulate status20 if Viken20 == 1& Viken15 == 1, freq
+tabulate status15 if Viken15 == 1
+tabulate status20 if Viken20 == 1
+
+tabulate status20 if Østfold15 == 1 & Akershus20 == 1
+tabulate status20 if Buskerud15 == 1 & Akershus20 == 1
+tabulate status20 if Oslo15 == 1 & Akershus20 == 1
+tabulate status20 if Akershus15 == 0 & Akershus20 == 1
+tabulate status20 if Akershus15 == 1 & Akershus20 == 0
+// 74k tilflyttere til akershus brutto, hvorav 20k fra buskerud, 3k fra østfold, 35k fra oslo. (58k fra andre steder i Oslo/Viken, 16k resten av landet)
+sankey status16 stautus20 if Østfold20 ==1

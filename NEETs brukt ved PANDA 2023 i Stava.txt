@@ -1,0 +1,778 @@
+// NEETs brukt ved PANDA 2023 i Stavanger
+//Hele skriptet, inkluderer test for 2016 for sammenligning og mange variabler og tilpassninger. 
+// Ta kontakt med andrha@viken.no for spm 
+// Etter 1. januar 2024, andrha@afk.no 
+
+//Kobler til database
+require no.ssb.fdb:20 as ds
+
+//Notater til meg selv.
+// Se på NEET-rate per kommune/Økreg
+// NEET-rate på innvandring
+// Tap av skatteinntekter som resultat av at flere blir neets?
+// Tap av livskvalitet, stor andel blir uføre
+// Trace hva som ligger bak som "viktig" forklaring på hvorfor de blir neets og uføre
+// Ripamonti og Barberis dokumenterer at lav formue er hovedårsaken(!) 
+// Men de skiller på "Høykonkurranse områder" og ikke. Dersom område ikke har mye konkurranse/muligheter, så er det ikke lenger foklaringen.
+// Sentralitet kan være releveant her, NORCE sier at det ikke er en linjær sammenheng. Det er forskjeller mellom sentralitetsgradene (men også innad). Så det er ikke sikkert sentralitetsgrad er en "åpenbar" måte å forklare ting på.
+
+//Trygdebasen, se antall ganger de har.
+
+//Lager et datasett med alle bosatte i Norge per 1/1 2021 (persondata)
+create-dataset alle
+import ds/BEFOLKNING_STATUSKODE 2021-01-01 as regstat
+keep if regstat == '1'
+import ds/BEFOLKNING_FOEDSELS_AAR_MND as faarmnd
+import ds/NUDB_BU 2020-08-31 as utd
+import ds/BEFOLKNING_KJOENN as kjønn
+import ds/BEFOLKNING_FODELAND as land
+import ds/REGSYS_ARB_ARBMARK_STATUS 2016-11-16 as arbmarkstatus16
+import ds/REGSYS_ARB_ARBMARK_STATUS 2019-11-16 as arbmarkstatus19
+import ds/REGSYS_ARB_ARBMARK_STATUS 2021-11-16 as arbmarkstatus 
+
+
+//Prøver å flytte disse lenger ned. Tror de tukler til barnevernstallene
+generate alder = 2021 - int(faarmnd/100)
+//keep if alder >= 16 & alder < 30
+generate uo25 = 0
+replace uo25 = 0 if alder > 16 & alder <= 24
+replace uo25 = 1 if alder > 24 & alder < 30
+
+//2016 
+generate alder16 = 2016 - int(faarmnd/100)
+generate uo20i2016 = 0
+replace uo20i2016 = 1 if alder16 > 20
+
+
+// Denne er litt optional, kan lages i tillegg (som Viken eller Viken + Oslo datasett)
+import ds/BEFOLKNING_KOMMNR_FAKTISK 2021-01-01 as bosted
+generate fylke = substr(bosted, 1, 2)
+generate kom = substr(bosted, 1, 4)
+
+// Her har jeg laget standard regioner fra SSB istedenfor kommunene hver for seg. Skriptet kombinerer de sammen på kommunenummer
+destring kom
+clone-variables kom -> økreg
+recode økreg (3001 3012 = 1 'Halden') (3003 3004 3011 3017 = 2 'Fredrikstad/Sarpsborg') (3002 3018 = 3 'Moss') (3013/3016 = 4 'Indre Østfold') (3019/3023 3028 = 5 'Follo') (3026 3027 3029/3034 3054 = 6 'Lillestrøm') (3033 3035/3037 = 7 'Ullensaker/Eidsvoll') (3024 3025 = 8 'Asker/Bærum') (3007 3038 3046 3053 = 9 'Hønefoss') (3005 3045 3046/3049 = 10 'Drammen') (3006 3050/3052 = 11 'Kongsberg') (3039/3044 = 12 'Hallingdal') (3401 3414/3417 = 13 'Kongsvinger') 
+
+// Lager fylker
+clone-variables kom -> Østfold
+destring Østfold
+recode Østfold (3001/3004 3011/3018 = 1'Østfold')
+recode Østfold (0301/1875 3005/3007 3019/5444 = 0 'Resten av Oslo/Viken' )
+tabulate Østfold
+
+clone-variables kom -> Oslo
+destring Oslo
+recode Oslo (0301 = 1 'Oslo')
+recode Oslo (1101/1875 3001/5444 = 0 'Viken')
+
+clone-variables kom -> Akershus
+destring Akershus
+recode Akershus (3019/3037 = 1 'Akershus')
+recode Akershus (0301/1875 3001/3018 3038/5444 = 0 'Resten av Oslo/Viken')
+
+clone-variables kom -> Buskerud
+destring Buskerud
+recode Buskerud (3005/3007 3038/3054 = 1 'Buskerud')
+recode Buskerud (0301 1101/1875 3001/3004 3011/3037 3401/5444 = 0 'Resten av Oslo/Viken')
+
+// Landgrupper 2 versjoner. En generell og en Vestlig/Ikke/Norskfødt
+clone-variables land -> landgruppe
+clone-variables land -> landgruppe2
+destring landgruppe
+destring landgruppe2
+recode landgruppe (111 120 138 139 140 148 155 156 159/164 = 2 'Europeiske land utenom EU') (101/141 144/158 = 1 'EU/EØS') (203/393 = 3 'Afrika') (143 404/578 = 4 'Asia med Tyrkia') (612 684 = 5 'Nord-Amerika') (601/775 = 6 'Sør- og Mellom-Amerika') (802/840 = 7 'Oseania') (980 = 8 'Statsløse') (990 = 9 'Uoppgitt')
+recode landgruppe2 (000 = 0 'Norsk') (143 404/578 111 120 138 139 140 148 155 156 159/164 203/393 601/605 616/672 680 705/775 980 990 = 2 'Ikke-Vestlig') (101/141 144/158 612 684 805 820 = 1 'Vestlig') 
+//Statsløse inkludert som ikke-vestlig, kan gjerne endres til egen kategori, se variabel "land" 
+
+//Standard for økonomiske regioner fra SSB
+
+
+//Lager datasett for arbeidsforhold (jobbdata)
+// Dette er for å kontrollere om de har arbeidstid registrert per måned. Det er ikke forløpsdataformat, men likevel kontrollerer man forløp fordi det er akkumulert arbeidstid per måned.
+create-dataset arbeidsforhold
+
+import ds/ARBLONN_ARB_ARBEIDSTID 2019-08-16 as arbtid1908
+import ds/ARBLONN_ARB_ARBEIDSTID 2019-09-16 as arbtid1909, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2019-10-16 as arbtid1910, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2019-11-16 as arbtid1911, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2019-12-16 as arbtid1912, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2020-01-16 as arbtid2001, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2020-02-16 as arbtid2002, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2020-03-16 as arbtid2003, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2020-04-16 as arbtid2004, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2020-05-16 as arbtid2005, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2020-06-16 as arbtid2006, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2020-07-16 as arbtid2007, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2020-08-16 as arbtid2008, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2020-09-16 as arbtid2009, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2020-10-16 as arbtid2010, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2020-11-16 as arbtid2011, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2020-12-16 as arbtid2012, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2021-01-16 as arbtid2101, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2021-02-16 as arbtid2102, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2021-03-16 as arbtid2103, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2021-04-16 as arbtid2104, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2021-05-16 as arbtid2105, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2021-06-16 as arbtid2106, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2021-07-16 as arbtid2107, outer_join
+import ds/ARBEIDSFORHOLD_PERSON as personid
+
+//Merk at alle i dette datasettet har minst 1 måned med jobb (arbeidstid > 0) siden ARBLONN-variablene kun har personer i jobb som populasjon. Kan derfor bare sette verdien 1 på alle arbeidsforhold for variabelen ant_jobber2021
+
+generate ant_jobber2021 = 1
+
+//Aggregerer fra jobbnivå til persondatanivå (summerer antall jobbforhold per individ)
+collapse (sum) ant_jobber2021, by(personid)
+
+merge ant_jobber2021 into alle
+
+use alle  
+tabulate ant_jobber2021, missing
+// Ekskludere en valgt populasjon
+generate jobb2021 = 0
+replace jobb2021 = 1 if ant_jobber2021 > 0
+tabulate jobb2021
+
+
+
+create-dataset arbeidsforhold19
+//ARBLONN har ingenting før 2015. Dvs., at her tror jeg regsys må brukes, eller w_lønn f.eks. Eller at jeg holder meg til 1.5 år. ELLER at vi går for hele 2015-2017
+
+import ds/ARBLONN_ARB_ARBEIDSTID 2018-01-16 as arbtid1501
+import ds/ARBLONN_ARB_ARBEIDSTID 2018-02-16 as arbtid1502, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2018-03-16 as arbtid1503, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2018-04-16 as arbtid1504, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2018-05-16 as arbtid1505, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2018-06-16 as arbtid1506, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2018-07-16 as arbtid1507, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2018-08-16 as arbtid1508, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2018-09-16 as arbtid1509, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2018-10-16 as arbtid1510, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2018-11-16 as arbtid1511, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2018-12-16 as arbtid1512, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2019-01-16 as arbtid1601, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2019-02-16 as arbtid1602, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2019-03-16 as arbtid1603, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2019-04-16 as arbtid1604, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2019-05-16 as arbtid1605, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2019-06-16 as arbtid1606, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2019-07-16 as arbtid1607, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2019-08-16 as arbtid1608, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2019-09-16 as arbtid1609, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2019-10-16 as arbtid1610, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2019-11-16 as arbtid1611, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2019-12-16 as arbtid1612, outer_join
+import ds/ARBEIDSFORHOLD_PERSON as personid
+
+//Merk at alle i dette datasettet har minst 1 måned med jobb (arbeidstid > 0) siden ARBLONN-variablene kun har personer i jobb som populasjon. 
+//Kan derfor bare sette verdien 1 på alle arbeidsforhold for variabelen ant_jobber2021
+
+generate ant_jobber2019 = 1
+
+//Aggregerer fra jobbnivå til persondatanivå (summerer antall jobbforhold per individ)
+collapse (sum) ant_jobber2019, by(personid)
+use alle 
+use arbeidsforhold19
+merge ant_jobber2019 into alle
+use alle
+generate jobb2019 = 0
+replace jobb2019 = 1 if ant_jobber2019 > 0
+
+create-dataset arbeidsforhold16
+//ARBLONN har ingenting før 2015. Dvs., at her tror jeg regsys må brukes, eller w_lønn f.eks. Eller at jeg holder meg til 1.5 år. ELLER at vi går for hele 2015-2017
+
+
+import ds/ARBLONN_ARB_ARBEIDSTID 2015-02-16 as arbtid1502
+import ds/ARBLONN_ARB_ARBEIDSTID 2015-03-16 as arbtid1503, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2015-04-16 as arbtid1504, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2015-05-16 as arbtid1505, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2015-06-16 as arbtid1506, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2015-07-16 as arbtid1507, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2015-08-16 as arbtid1508, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2015-09-16 as arbtid1509, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2015-10-16 as arbtid1510, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2015-11-16 as arbtid1511, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2015-12-16 as arbtid1512, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2016-01-16 as arbtid1601, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2016-02-16 as arbtid1602, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2016-03-16 as arbtid1603, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2016-04-16 as arbtid1604, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2016-05-16 as arbtid1605, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2016-06-16 as arbtid1606, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2016-07-16 as arbtid1607, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2016-08-16 as arbtid1608, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2016-09-16 as arbtid1609, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2016-10-16 as arbtid1610, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2016-11-16 as arbtid1611, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2016-12-16 as arbtid1612, outer_join
+import ds/ARBEIDSFORHOLD_PERSON as personid
+
+//Merk at alle i dette datasettet har minst 1 måned med jobb (arbeidstid > 0) siden ARBLONN-variablene kun har personer i jobb som populasjon. 
+//Kan derfor bare sette verdien 1 på alle arbeidsforhold for variabelen ant_jobber2021
+
+generate ant_jobber2016 = 1
+
+//Aggregerer fra jobbnivå til persondatanivå (summerer antall jobbforhold per individ)
+collapse (sum) ant_jobber2016, by(personid)
+merge ant_jobber2016 into alle
+use alle
+generate jobb2016 = 0
+replace jobb2016 = 1 if ant_jobber2016 > 0
+
+//Lager datasett for kurs/utdanning (kursdata)
+create-dataset kursdata
+import-event ds/NUDB_KURS_NUS 2019-08-01 to 2021-08-01 as kurstype
+destring kurstype, force
+
+// AAP-data er litt krunglete, vil ikke gi meg identisk med ufør.
+create-dataset aapdata
+import-event ds/ARBAVKLARPFDT_MOTTAK 2021-01-01 to 2021-11-30 as aap20
+destring aap20, force
+collapse(count) aap20, by(PERSONID_1)
+merge aap20 into alle
+use alle 
+generate aap2020 = 0 
+replace aap2020 = 1 if aap20 > 0
+
+tabulate aap2020
+
+create-dataset uføre
+import-event ds/UFOERP2011FDT_MOTTAK 2021-01-01 to 2021-11-30 as ufør20
+destring ufør20, force
+collapse(count) ufør20, by(PERSONID_1)
+merge ufør20 into alle
+use alle
+generate ufør2020 = 0
+replace ufør2020 = 1 if ufør20 > 0 
+
+tabulate ufør2020
+
+
+
+keep if alder >= 16 & alder < 30
+
+
+//create-dataset lenkeaap
+//import LENKE OM DEN TRENGER DET
+
+//Til å joine fnr med kursantall
+create-dataset lenkekurs
+import ds/NUDB_KURS_FNR as fnr
+merge fnr into kursdata
+
+// Aggregerer samme for kursdeltagelse. 
+use kursdata
+
+collapse (count) kurstype, by(fnr)
+
+rename kurstype ant_kurs
+merge ant_kurs into alle
+use alle
+//TEST
+generate utdanning = 0 
+replace utdanning = 1 if ant_kurs >=1
+tabulate utdanning jobb2021
+
+// NEET kan gjerne ha en variant som er korttids-NEET
+
+generate neet2021 = 0
+
+replace neet2021 = 1 if utdanning == 0 & jobb2021 == 0 & arbmarkstatus != '1' & arbmarkstatus !='2' 
+// replace need2021 = 2 if utdanning == 0 &
+
+//Lager datasett for kurs/utdanning (kursdata) 2019
+create-dataset kursdata19
+import-event ds/NUDB_KURS_NUS 2018-01-01 to 2019-12-31 as kurstype19
+destring kurstype19, force
+//Se om jeg kan ha denne på 2015-01-01 to 2016-12-30 eller 2017-01-01
+
+//Til å joine fnr med kursantall
+create-dataset lenkekurs19
+import ds/NUDB_KURS_FNR as fnr
+merge fnr into kursdata19
+
+// Aggregerer samme for kursdeltagelse. 
+use kursdata19
+
+collapse (count) kurstype19, by(fnr)
+
+rename kurstype19 ant_kurs19
+merge ant_kurs19 into alle
+use alle
+
+generate utdanning19 = 0 
+replace utdanning19 = 1 if ant_kurs19 >=1
+tabulate utdanning19 jobb2019
+
+generate neet2019 = 0
+replace neet2019 = 0 if alder16 >=18
+//Her må jeg lage arbmarkstatus19 i så fall
+replace neet2019 = 1 if utdanning19 == 0 & jobb2019 == 0 & arbmarkstatus19 != '1' & arbmarkstatus != '2' & alder16 >= 18
+
+// 2016
+//Lager datasett for kurs/utdanning (kursdata)
+create-dataset kursdata16
+import-event ds/NUDB_KURS_NUS 2015-01-01 to 2016-12-31 as kurstype16
+destring kurstype16, force
+//Se om jeg kan ha denne på 2015-01-01 to 2016-12-30 eller 2017-01-01
+
+//Til å joine fnr med kursantall
+create-dataset lenkekurs16
+import ds/NUDB_KURS_FNR as fnr
+merge fnr into kursdata16
+
+// Aggregerer samme for kursdeltagelse. 
+use kursdata16
+
+collapse (count) kurstype16, by(fnr)
+
+rename kurstype16 ant_kurs16
+merge ant_kurs16 into alle
+use alle
+
+generate utdanning16 = 0 
+replace utdanning16 = 1 if ant_kurs16 >=1
+tabulate utdanning16 jobb2016
+
+generate neet2016 = 0
+replace neet2016 = 0 if alder16 >15
+//Her må jeg lage arbmarkstatus16 i så fall
+replace neet2016 = 1 if utdanning16 == 0 & jobb2016 == 0 & arbmarkstatus16 != '1' & arbmarkstatus != '2' & alder16 > 15
+
+tabulate neet2016 neet2021 if uo20i2016==1 & uo25 ==1, freq rowpct
+tabulate neet2016 neet2021, freq rowpct
+tabulate neet2021
+tabulate neet2016
+tabulate økreg neet2021 neet2016 if uo20i2016==1 & uo25 ==1, freq rowpct
+tabulate neet2021 arbmarkstatus
+
+
+//barchart (count) neet2016==1 neet2021==1, over(landgruppe2)
+
+
+
+
+generate varNeet2016 = 0 
+replace varNeet2016 = 1 if neet2016 == 1 & neet2021 == 0
+tabulate varNeet2016
+
+import ds/INNTEKT_WLONN 2020-12-31 as lønn2020
+tabulate neet2021, summarize(lønn2020)
+tabulate ufør2020, summarize(lønn2020)
+tabulate aap2020, summarize(lønn2020)
+tabulate aap2020 neet2021 ufør2020, freq colpct
+generate neet2021aap = 1 if neet2021 == 1 & aap2020 ==1
+generate neet2021ufør = 1 if neet2021 == 1 & ufør2020 ==1
+//barchart (count) neet2021ufør neet2021aap neet2021 ==1
+//Gjøre som Ballo, fjerne de som tjener for mye >:(
+
+// Lager kort-versjon til Kort-NEET 
+//Lager datasett for arbeidsforhold (jobbdata)
+create-dataset arbeidsforholdKORT
+
+
+//import ds/ARBLONN_ARB_ARBEIDSTID 2020-07-16 as arbtid2007
+//import ds/ARBLONN_ARB_ARBEIDSTID 2020-08-16 as arbtid2008, outer_join
+//import ds/ARBLONN_ARB_ARBEIDSTID 2020-09-16 as arbtid2009, outer_join
+//import ds/ARBLONN_ARB_ARBEIDSTID 2020-10-16 as arbtid2010, outer_join
+//import ds/ARBLONN_ARB_ARBEIDSTID 2020-11-16 as arbtid2011, outer_join
+//import ds/ARBLONN_ARB_ARBEIDSTID 2020-12-16 as arbtid2012, outer_join
+//import ds/ARBLONN_ARB_ARBEIDSTID 2021-01-16 as arbtid2101, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2021-02-16 as arbtid2102
+import ds/ARBLONN_ARB_ARBEIDSTID 2021-03-16 as arbtid2103, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2021-04-16 as arbtid2104, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2021-05-16 as arbtid2105, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2021-06-16 as arbtid2106, outer_join
+import ds/ARBLONN_ARB_ARBEIDSTID 2021-07-16 as arbtid2107, outer_join
+import ds/ARBEIDSFORHOLD_PERSON as personid
+
+//Merk at alle i dette datasettet har minst 1 måned med jobb (arbeidstid > 0) siden ARBLONN-variablene kun har personer i jobb som populasjon. Kan derfor bare sette verdien 1 på alle arbeidsforhold for variabelen ant_jobber2021
+
+generate ant_jobber2021KORT = 1
+
+//Aggregerer fra jobbnivå til persondatanivå (summerer antall jobbforhold per individ)
+collapse (sum) ant_jobber2021KORT, by(personid)
+
+merge ant_jobber2021KORT into alle
+
+use alle  
+tabulate ant_jobber2021KORT, missing
+// Ekskludere en valgt populasjon
+generate jobb2021KORT = 0
+replace jobb2021KORT = 1 if ant_jobber2021KORT > 0
+tabulate jobb2021KORT
+
+
+//Lager datasett for kurs/utdanning (kursdata KORTVARIANT)
+create-dataset kursdataKORT
+//import-event ds/NUDB_KURS_NUS 2020-08-01 to 2021-08-01 as kurstypeKORT
+import-event ds/NUDB_KURS_NUS 2021-02-01 to 2021-08-01 as kurstypeKORT
+destring kurstypeKORT, force
+
+create-dataset lenkekursKORT
+import ds/NUDB_KURS_FNR as fnr
+merge fnr into kursdataKORT
+
+use kursdataKORT
+collapse(count) kurstypeKORT, by(fnr)
+rename kurstypeKORT antkursKORT
+merge antkursKORT into alle 
+
+use alle 
+
+// Her skal vi ha generate utdanningKORT
+generate utdanning21KORT = 0 
+replace utdanning21KORT = 1 if antkursKORT >=1
+//det var det
+tabulate utdanning21KORT jobb2021KORT
+
+generate neet2021KORT = 0
+replace neet2021KORT = 0 if alder >15
+//Denne har alder >15 en gang til, pga glitch. 
+replace neet2021KORT = 1 if utdanning21KORT == 0 & jobb2021KORT == 0 & arbmarkstatus != '1' & arbmarkstatus != '2' & alder > 15
+
+//lage osloViken alle 
+import ds/BEFOLKNING_KOMMNR_FAKTISK 2021-01-01 as Komreg21
+generate fylke20 = substr(Komreg21, 1, 2)
+
+
+clone-variables Komreg21 -> OsloViken21
+destring OsloViken21
+recode OsloViken21 (0301 = 4 'Oslo')(3019/3037 3053 3054 = 2 'Akershus')(3005/3007 3038/3052 = 3 'Buskerud')(3001/3004 3011/3018 = 1'Østfold') (1101/1875 2111 3401/3825 2580 4201/5444 = 5 'Resten av landet') 
+tabulate OsloViken21 neet2021, freq rowpct
+
+tabulate OsloViken21 neet2021KORT, freq rowpct
+histogram alder if neet2021KORT == 1
+
+import ds/BEFOLKNING_INVKAT as invkat 
+tabulate alder if invkat == 'A'
+
+generate innvandrer = 0 
+replace innvandrer = 1 if invkat == 'B' & 'C' & 'E'
+recode innvandrer (0 = 0 'Norsk') (1 = 1 'Innvandrer')
+tabulate innvandrer
+//recode invkat ('A - Født i Norge med to norskfødte foreldre' 'F - Norskfødte med én utenlandsfødt forelder' = 'Norsk')
+
+
+
+
+//Totale andelen neet 2021 er 9.24%
+tabulate neet2021 arbmarkstatus, colpct freq missing
+
+tabulate neet2021 uo25, colpct freq missing
+//Lager bakgrunnsvariabler 
+
+//Utdanningsnivå
+generate utdnivå = substr(utd,1,1)
+destring utdnivå, force
+define-labels utdlabel 0 'Ingen utdanning' 1 Barneskole 2 Ungdomsskole 3 Videregående 4 'Videregående - avsluttende' 5 'Påbygging til videregående' 6 'UH-utdanning - lavere nivå' 7 'UH-utdanning - høyere nivå' 8 Forskerutdanning 9 Uoppgitt
+assign-labels utdnivå utdlabel
+
+tabulate utdnivå, cellpct freq
+tabulate utdnivå, cellpct freq missing
+
+//Alternativ inndeling !! Tror vi bytter replace med noe annet..
+//generate utdgr = 0 
+destring utdnivå, force
+generate utdgr = 1 if utdnivå >= 0
+replace utdgr = 2 if utdnivå >= 3
+replace utdgr = 3 if utdnivå >= 6
+replace utdgr = 4 if utdnivå >=7
+replace utdgr = 9 if utdnivå == 9
+// Ca. 3000 er syssmiss, dette er viktig mtp innvandring. Tror mange kan være utenfor statistikken derav
+define-labels utdlabel2 1 Grunnskole 2 Vgs 3 Høyere_kort 4 Høyere_lang 9 Uoppgitt
+assign-labels utdgr utdlabel2
+
+//Lager dikotom variabel 
+destring utdnivå, force
+generate utdgr2 = 0 if utdnivå >= 3
+replace utdgr2 = 1 if utdnivå >= 7
+replace utdgr2 = 9 if utdnivå == 9
+// Ca. 3000 er syssmiss, dette er viktig mtp innvandring. Tror mange kan være utenfor statistikken derav
+define-labels utdlabel3 0 VGS 1 Høyere 9 Uoppgitt
+assign-labels utdgr2 utdlabel3
+
+// Legger på flere interessante bakgrunnsvariabler
+import ds/GRUNNSTFDT_MOTTAK 2020-11-30 as grunnstønad
+// tror det er 30.11.2020 som er nyest, sjekker
+import ds/HJELPSTFDT_MOTTAK 2020-11-30 as hjelpestønad
+//Disse må være i kombo, tror ikke Ballo fiksa det her riktig egentlig
+destring grunnstønad hjelpestønad, force
+//Kombinerer
+generate allstønad = 0 
+replace allstønad = 1 if grunnstønad | hjelpestønad == 1
+
+oaxaca neet2021 utdgr alder landgruppe by kjønn
+
+generate neetW = 1 if allstønad == 0
+
+import ds/BEFOLKNING_BARN_I_HUSH 2021-01-01 as barn
+// tror den går til 1.1.2022, dvs kan matche med 2021. Dato kan velges etter 1.1 alle år
+import ds/SIVSTANDFDT_SIVSTAND 2020-12-31 as gift
+// Tror ikke vi får noenting ut av sivilstand, 98% i aldersgruppen er ugift.. Nyeste gyldige er 31.12.20
+import ds/NUDB_SOSBAK as sosbakg
+//Så tar jeg med, ikke Ballo:
+import ds/BOFORHOLD_TRANGBODD 2021-01-01 as trangbodd
+//denne er 1: Bor trangt 2:Romslig 3:Uopgitt
+
+import ds/BEFOLKNING_PARSTATUS 2022-01-01 as parstatus
+//Denne har 8 kategorier + 2 imputerte (U og P). Kan kodes om til felles barn/gift/samboer tror jeg
+
+import ds/BEFOLKNING_BARN3_I_HUSH 2022-01-01 as borhosforeldre
+// denne itl å sjekke om de bor hos foreldre i husholdningen. 1.1.2022 (alltid 1.1) Forstår ikke inndelingen
+// Jeg tror egentlig denne ser om personen har barn i sin husholdning.???
+replace borhosforeldre = 1 if borhosforeldre > 0 
+
+import ds/INNTEKT_WLONN 2020-01-01 as lønn20
+
+import ds/INNTEKT_BER_BRFORM 2020-01-01 as allkapital
+
+replace allkapital = 0 if allkapital < 10000
+//Sjekke om de har kapital til å leve på
+
+import ds/INNTEKT_WSAMINNT 2020-12-31 as allinntekt
+//Samlet inntekt, kanskje like greit. Kapitalinntekt, skattepliktige og skattefrie overføringer tom 31-12-2020
+generate allinntektd = 0
+replace allinntektd = 1 if allinntekt > 10000
+// bare tester med 10.000NOK
+
+import ds/INNTEKT_HUSH_IES 2020-12-31 as inntekthusholdning
+generate inntekthusholdningd = 0
+replace inntekthusholdningd = 1 if inntekthusholdning > 500000
+// 500 000 er random yolo-tall
+//Samlet inntekt for hele husholdningen. Dvs, om de bor hos foreldre som forsørger de (eller noen andre)
+
+
+
+generate neetLK =0
+destring neetLK, force
+//replace neetLK = 1 if neet2021 == 1
+replace neetLK = 1 if neet2021 == 1  
+ 
+replace neetLK = 2 if neet2021KORT == 1  
+replace neetLK = 1 if neet2021 == 1 
+recode neetLK (0 = 0 'Ikke NEET') (1 = 1 'NEET 2år') (2=2 'NEET 6 mnd') 
+
+//recode neetLK = (0 = 0 'Ikke NEET') (1 = 1 'NEET 6 mnd') (2= 2 'NEET 2 år')
+tabulate neetLK OsloViken21
+tabulate neetLK kjønn
+
+tabulate neetLK OsloViken21 if kjønn == '1' 
+tabulate neetLK OsloViken21 if kjønn == '2'
+
+histogram alder if neetLK == 1 & 2
+
+// ny variabel uo25 år 
+
+tabulate neetLK uo25
+recode uo25 (0 = 0 'Under 25 år') (1 = 1 'Over 25 år') 
+tabulate neetLK OsloViken21 if uo25 == 0, missing
+tabulate neetLK OsloViken21 if uo25 == 1, missing
+tabulate alder if uo25 == 1
+
+
+tabulate neetLK OsloViken21 if innvandrer == 0 , freq
+tabulate neetLK OsloViken21 if innvandrer == 1 , freq
+
+tabulate regstat OsloViken21, freq
+
+tabulate neetLK OsloViken21 if uo25 == 1
+tabulate neetLK OsloViken21
+
+
+tabulate neetLK kjønn OsloViken21
+
+tabulate neetLK kjønn
+//use arbeidsforhold
+
+// Barnevern tar siste 10 år med barnevernstiltak. Det er en indikasjon på at ting ikke var helt bra hjemme. 
+// Tiltakene kan ha tatt slutt med ulike utfall. 
+create-dataset Barnevern
+import ds/BEFOLKNING_STATUSKODE 2021-01-01 as regstat
+keep if regstat == '1'
+import ds/BEFOLKNING_FOEDSELS_AAR_MND as faarmnd
+import ds/BEFOLKNING_KOMMNR_FAKTISK 2021-01-01 as bosted
+generate fylke = substr(bosted, 1, 2)
+generate kom = substr(bosted, 1, 4)
+keep if fylke == '30' | fylke == '01' |fylke == '02' | fylke == '06' | fylke == '03'
+generate alder = 2021 - int(faarmnd/100)
+keep if alder >= 16 & alder < 30
+
+import ds/BARNEVERN_OMSORG 2011-12-31 as vernomsorg11
+import ds/BARNEVERN_OMSORG 2012-12-31 as vernomsorg12
+import ds/BARNEVERN_OMSORG 2013-12-31 as vernomsorg13
+import ds/BARNEVERN_OMSORG 2014-12-31 as vernomsorg14
+import ds/BARNEVERN_OMSORG 2015-12-31 as vernomsorg15
+import ds/BARNEVERN_OMSORG 2016-12-31 as vernomsorg16
+import ds/BARNEVERN_OMSORG 2017-12-31 as vernomsorg17
+import ds/BARNEVERN_OMSORG 2018-12-31 as vernomsorg18
+import ds/BARNEVERN_OMSORG 2019-12-31 as vernomsorg19
+import ds/BARNEVERN_OMSORG 2020-12-31 as vernomsorg20
+import ds/BARNEVERN_OMSORG 2021-12-31 as vernomsorg21
+
+destring vernomsorg11, force
+destring vernomsorg12, force
+destring vernomsorg13, force
+destring vernomsorg14, force
+destring vernomsorg15, force
+destring vernomsorg16, force
+destring vernomsorg17, force
+destring vernomsorg18, force
+destring vernomsorg19, force
+destring vernomsorg20, force
+destring vernomsorg21, force
+collapse(count) vernomsorg11 vernomsorg12 vernomsorg13 vernomsorg14 vernomsorg15 vernomsorg16 vernomsorg17 vernomsorg18 vernomsorg19 vernomsorg20 vernomsorg21, by(PERSONID_1)
+tabulate vernomsorg20
+//replace vernomsorg20 = 0 
+//replace vernomsorg20 = 1 if vernomsorg20 >0 
+
+merge vernomsorg11 into alle
+merge vernomsorg12 into alle
+merge vernomsorg13 into alle
+merge vernomsorg14 into alle
+merge vernomsorg15 into alle
+merge vernomsorg16 into alle
+merge vernomsorg17 into alle
+merge vernomsorg18 into alle
+merge vernomsorg19 into alle
+merge vernomsorg20 into alle
+merge vernomsorg21 into alle
+
+create-dataset barnevern2
+import ds/BEFOLKNING_STATUSKODE 2021-01-01 as regstat
+keep if regstat == '1'
+import ds/BEFOLKNING_FOEDSELS_AAR_MND as faarmnd
+import ds/BEFOLKNING_KOMMNR_FAKTISK 2021-01-01 as bosted
+generate fylke = substr(bosted, 1, 2)
+generate kom = substr(bosted, 1, 4)
+keep if fylke == '30' | fylke == '01' |fylke == '02' | fylke == '06' | fylke == '03'
+generate alder = 2021 - int(faarmnd/100)
+keep if alder >= 16 & alder < 30
+
+import ds/BARNEVERN_HJELPETIL 2011-12-31 as hjelpomsorg11
+import ds/BARNEVERN_HJELPETIL 2012-12-31 as hjelpomsorg12
+import ds/BARNEVERN_HJELPETIL 2013-12-31 as hjelpomsorg13
+import ds/BARNEVERN_HJELPETIL 2014-12-31 as hjelpomsorg14
+import ds/BARNEVERN_HJELPETIL 2015-12-31 as hjelpomsorg15
+import ds/BARNEVERN_HJELPETIL 2016-12-31 as hjelpomsorg16
+import ds/BARNEVERN_HJELPETIL 2017-12-31 as hjelpomsorg17
+import ds/BARNEVERN_HJELPETIL 2018-12-31 as hjelpomsorg18
+import ds/BARNEVERN_HJELPETIL 2019-12-31 as hjelpomsorg19
+import ds/BARNEVERN_HJELPETIL 2020-12-31 as hjelpomsorg20
+import ds/BARNEVERN_HJELPETIL 2021-12-31 as hjelpomsorg21
+
+destring hjelpomsorg11, force
+destring hjelpomsorg12, force
+destring hjelpomsorg13, force
+destring hjelpomsorg14, force
+destring hjelpomsorg15, force
+destring hjelpomsorg16, force
+destring hjelpomsorg17, force
+destring hjelpomsorg18, force
+destring hjelpomsorg19, force
+destring hjelpomsorg20, force
+destring hjelpomsorg21, force
+collapse(count) hjelpomsorg11 hjelpomsorg12 hjelpomsorg13 hjelpomsorg14 hjelpomsorg15 hjelpomsorg16 hjelpomsorg17 hjelpomsorg18 hjelpomsorg19 hjelpomsorg20 hjelpomsorg21 , by(PERSONID_1)
+tabulate hjelpomsorg20
+//replace hjelpomsorg20 = 0 
+//replace hjelpomsorg20 = 1 if hjelpomsorg20 >0 
+merge hjelpomsorg11 into alle
+merge hjelpomsorg12 into alle
+merge hjelpomsorg13 into alle
+merge hjelpomsorg14 into alle
+merge hjelpomsorg15 into alle
+merge hjelpomsorg16 into alle
+merge hjelpomsorg17 into alle
+merge hjelpomsorg18 into alle
+merge hjelpomsorg19 into alle
+merge hjelpomsorg20 into alle
+merge hjelpomsorg21 into alle
+
+// Hensikten her er å undersøke barnevernssaker fra tidligere, lage en variabel/tilrettelegge for oss. 
+
+use alle
+generate barnevern = 0
+replace barnevern = 1 if  hjelpomsorg11 == 1 | hjelpomsorg12 == 1 | hjelpomsorg13 == 1 | hjelpomsorg14 == 1 | hjelpomsorg15 == 1 | hjelpomsorg16 == 1 | hjelpomsorg17 == 1 | hjelpomsorg18 == 1 | hjelpomsorg19 == 1 |hjelpomsorg20 == 1 | hjelpomsorg21 == 1 | vernomsorg11 == 1 | vernomsorg12 == 1 | vernomsorg13 == 1 | vernomsorg14 == 1 | vernomsorg15 == 1 | vernomsorg16 == 1 | vernomsorg17 == 1 | vernomsorg18 == 1 | vernomsorg19 == 1 | vernomsorg20 == 1 | vernomsorg21 == 1 
+tabulate barnevern, freq 
+
+tabulate barnevern, freq cellpct
+
+//import ds/NUDB_SOSBAK as sosbakg
+ tabulate sosbakg
+destring sosbakg
+ 
+recode sosbakg (9 = .)
+ 
+replace sosbakg = . if sosbakg == 9
+ 
+tabulate sosbakg OsloViken21 if neet2021 == 1
+
+import ds/NUDB_BU 2016-11-01 as utd16
+
+replace utd16 = substr(utd16,1,1)
+
+destring utd16
+
+generate dropout = 1 if utd16 < 4
+
+recode dropout (. = 0)
+
+tabulate landgruppe 
+clone-variables landgruppe -> ikkevest
+clone-variables landgruppe -> ikkenorsk
+destring ikkevest
+destring ikkenorsk
+recode ikkevest  (0 = .) (1=.) (2/7 = 1)
+recode ikkenorsk  (0 = .) (1/7 = 1)
+
+
+tabulate neet2021
+clone-variables neet2021 -> neetJa
+destring neetJa
+recode neetJa (0=.)
+tabulate neetJa
+// Kjører et par inferensielle kjøringer her. 
+
+import ds/INNTEKT_WLONN 2019-12-31 as lønn2019
+import ds/INNTEKT_WLONN 2018-12-31 as lønn2018
+import ds/INNTEKT_WLONN 2017-12-31 as lønn2017
+import ds/INNTEKT_WLONN 2014-12-31 as lønn2014
+import ds/INNTEKT_WLONN 2012-12-31 as lønn2012
+import ds/INNTEKT_WLONN 2010-12-31 as lønn2010
+
+generate tidlarb = 0
+replace tidlarb = 1 if lønn2010 > 21480
+replace tidlarb = 1 if lønn2012 > 23435
+replace tidlarb = 1 if lønn2014 > 24430
+replace tidlarb = 1 if lønn2017 > 27085
+replace tidlarb = 1 if lønn2018 > 28430
+replace tidlarb = 1 if lønn2019 > 30140
+recode lønn2010 lønn2012 lønn2014 lønn2017 lønn2018 lønn2019 (. = 0)
+
+regress neet2021 tidlarb dropout sosbakg ikkenorsk ikkevest utdnivå barnevern 
+
+// legger inn invkatvariabelen her
+regress neet2021 tidlarb dropout barnevern innvandrer sosbakg
+
+tabulate neet2021 OsloViken21 if landgruppe2== 0, freq colpct 
+
+
+tabulate OsloViken21 uo25 if innvandrer == 1 & neet2021 == 1, freq colpct
+
+tabulate OsloViken21 uo25 if landgruppe2 != 0 & neet2021 == 1, freq colpct
+
+generate NeetFaktorer = 0 
+replace NeetFaktorer = 1 if tidlarb == 0
+replace NeetFaktorer = 2 if dropout == 1
+replace NeetFaktorer = 3 if barnevern == 1
+replace NeetFaktorer = 4 if innvandrer == 1 
+replace NeetFaktorer = 5 if sosbakg == 1 & 2 & 3
+
+tabulate OsloViken21 NeetFaktorer if neet2021 ==1, freq rowpct
+
+tabulate OsloViken21 tidlarb if neet2021 ==1, freq rowpct
+tabulate OsloViken21 dropout if neet2021 ==1, freq rowpct
+
+tabulate OsloViken21 tidlarb if neet2021 ==0, freq rowpct
+tabulate OsloViken21 dropout if neet2021 ==0, freq rowpct
